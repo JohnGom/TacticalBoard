@@ -1,0 +1,12 @@
+{
+  "name": "tactical-board",
+  "private": true,
+  "packageManager": "pnpm@10.8.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @tactical-board/web dev",
+    "dev:api": "pnpm --filter @tactical-board/api dev",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build"
+  }
+}
