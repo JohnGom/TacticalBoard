@@ -33,7 +33,7 @@ Historical match selection; official match lineups and substitutions; live data;
 
 ## Iterations
 
-### 1. Foundation and provider feasibility — foundation delivered; provider gate open
+### 1. Foundation and provider feasibility — foundation delivered; data-rights gate open
 
 1. **Goal/value:** create a runnable web/API base and avoid choosing a provider without evidence.
 2. **Scope/exclusions:** workspace setup, strict TS, shared contracts, health endpoint, provider coverage/terms investigation; no production data integration, authentication, database, or hosting.
@@ -103,18 +103,18 @@ Historical match selection; official match lineups and substitutions; live data;
 10. **Done:** migrations, backup/restore notes, ownership tests, loading/error/empty/success UI states.
 11. **Risks/rollback:** schema migration/data loss; additive migrations and tested restore path.
 
-### 6. External football data
+### 6. External football data — local Free-plan integration implemented; publication gate open
 
 1. **Goal/value:** reduce manual player entry for supported teams.
-2. **Scope/exclusions:** approved provider's search and squad import; no live feeds, historical match use, or unlicensed images.
-3. **Dependencies:** target league/team validation in Iteration 1 and approval of provider/terms/budget.
-4. **Deliverables:** server-side provider adapter, search UI, normalized records, player snapshots.
+2. **Scope/exclusions:** API-Football Free team search and current squads; no live feeds, season-specific 2026 stats, persistence, or unlicensed images.
+3. **Dependencies:** API-Football Free key configured locally; public use/retention terms remain approval gates.
+4. **Deliverables:** server-side provider adapter, search UI, normalized records, player snapshots, typed failure states, short-lived process cache.
 5. **Likely modules/files:** `apps/api/src/providers`, `apps/api/src/football-data`, search UI.
 6. **Database/API:** preserve provider IDs and snapshot fields; internal API types remain provider independent.
 7. **Security:** provider token remains server-side; validate provider payloads; redact logs.
-8. **Tests:** sparse/invalid payloads, rate limit, timeout, outage, missing squad, normalization.
-9. **Acceptance:** supported team search and squad load; honest empty/error state; boards remain understandable after provider change.
-10. **Done:** usage complies with selected plan/terms; attribution and imagery rights addressed.
+8. **Tests:** sparse/invalid payloads, rate limit, timeout, outage, missing squad, normalization, and live sample lookup.
+9. **Acceptance:** supported team search and squad load; honest empty/error state; board positions survive replacing a player. Persistence/versioning remains in Iteration 5.
+10. **Done:** local/private Free-tier integration is working. Public use, provider-snapshot retention, and image permissions still require approval.
 11. **Risks/rollback:** coverage/terms change; feature flag can disable provider search without affecting custom data.
 
 ### 7. Release quality and operations
@@ -151,4 +151,4 @@ Historical match selection; official match lineups and substitutions; live data;
 
 ## Approval gates
 
-Before Iteration 5: authentication approach, hosting, and database region. Before Iteration 6: target leagues/national teams, provider, budget, commercial terms, attribution, and image permissions. Before MVP release: confirm undo/redo, PNG export, and any changes to deferred sharing/collaboration scope.
+Before Iteration 5: authentication approach, hosting, and database region. Before public/provider-data persistence: confirm publication, snapshot-retention, and image rights. Before MVP release: confirm undo/redo, PNG export, and any changes to deferred sharing/collaboration scope.

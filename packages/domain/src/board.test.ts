@@ -6,6 +6,7 @@ import {
   createFormationPlayers,
   FORMATIONS,
   movePlayer,
+  replaceBoardPlayer,
   type FormationName,
 } from "./index.js";
 
@@ -64,4 +65,31 @@ test("applying a formation preserves player IDs and user-edited snapshots", () =
   assert.deepEqual(reapplied.map((player) => player.id), players.map((player) => player.id));
   assert.equal(reapplied[0]!.snapshot.name, "Edited keeper");
   assert.deepEqual(reapplied[0]!.position, FORMATIONS["4-4-2"][0]!.position);
+});
+
+test("replacing a player gives the replacement a stable ID and preserves their pitch position", () => {
+  const players = createFormationPlayers("4-3-3", createIdFactory());
+  const moved = movePlayer(players, players[4]!.id, { x: 0.91, y: 0.23 });
+  let replacementId = 0;
+  const replaced = replaceBoardPlayer(
+    moved,
+    players[4]!.id,
+    {
+      name: "New defender",
+      shirtNumber: 18,
+      position: "Defender",
+      providerReference: { provider: "api-football", providerId: "9876" },
+    },
+    () => `replacement-${++replacementId}`,
+  );
+
+  assert.equal(replaced[4]!.id, "replacement-1");
+  assert.notEqual(replaced[4]!.id, players[4]!.id);
+  assert.deepEqual(replaced[4]!.position, { x: 0.91, y: 0.23 });
+  assert.equal(replaced[4]!.snapshot.name, "New defender");
+  assert.deepEqual(replaced[4]!.snapshot.providerReference, {
+    provider: "api-football",
+    providerId: "9876",
+  });
+  assert.deepEqual(replaced.slice(0, 4), moved.slice(0, 4));
 });

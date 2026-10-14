@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 22 or newer (the current workspace was inspected with Node.js 24).
+- Node.js 22.12 or newer (required by the current Vite release).
 - pnpm 10 or newer.
 
 ## Install
@@ -39,4 +39,14 @@ pnpm build
 
 The typecheck command covers the API, web client, shared contracts, and domain package. The current test command runs the domain unit tests. A linter and formatter are not configured yet.
 
-This foundation does not yet require environment variables, a database, authentication, or a football-provider token. Never add provider credentials to client code or commit real secrets. Provider access and deployment instructions will be added only after decisions and credentials are approved.
+## API-Football Free key
+
+The provisional free-provider candidate is API-Football. To prepare a local key file:
+
+```sh
+cp apps/api/.env.example apps/api/.env
+```
+
+Put your API-Football key after `APIFOOTBALL_API_KEY=` in `apps/api/.env`. That file is ignored by Git. The API loads it server-side through `dotenv`; never put the key in `apps/web`, a browser request, source control, or chat. Keep using the API-Football Free plan; do not add payment details or upgrade for this prototype.
+
+The integration is active for local team search and current-squad lookup. Use it to search clubs or national-team names in the editor. The Free plan's league-season data endpoint rejected season 2026 and reported access only for seasons 2022–2024, but the current-squad endpoint worked for the tested clubs and selections. The key does not confer data-publication or image rights. Current board edits are still in memory and are not saved.

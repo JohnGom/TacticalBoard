@@ -132,8 +132,25 @@ export function movePlayer(
   );
 }
 
-/** Provider port only: concrete providers must be added after coverage approval. */
+export function replaceBoardPlayer(
+  players: readonly BoardPlayer[],
+  boardPlayerId: string,
+  snapshot: PlayerSnapshot,
+  createId: () => string,
+): BoardPlayer[] {
+  if (!players.some((player) => player.id === boardPlayerId)) {
+    throw new Error(`Player ${boardPlayerId} is not on this board`);
+  }
+
+  return players.map((player) =>
+    player.id === boardPlayerId
+      ? { ...player, id: createId(), snapshot: { ...snapshot } }
+      : player,
+  );
+}
+
+/** Domain-facing port; concrete provider transport stays in the API infrastructure layer. */
 export interface FootballDataProvider {
   searchTeams(query: string): Promise<readonly import("@tactical-board/contracts").FootballTeamSummary[]>;
-  getTeamSquad(team: import("@tactical-board/contracts").FootballTeamSummary): Promise<import("@tactical-board/contracts").TeamSquadResponse>;
+  getTeamSquad(teamId: string): Promise<import("@tactical-board/contracts").TeamSquadResponse>;
 }

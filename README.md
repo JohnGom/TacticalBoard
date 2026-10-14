@@ -1,6 +1,6 @@
 # TacticalBoard
 
-A web-first football tactics platform. The project is in its foundation iteration; provider access, authentication, and cloud persistence have not been selected or implemented.
+A web-first football tactics platform. The local editor supports formations, free player positioning, and API-Football Free team/current-squad lookup. Authentication, custom-team management, and cloud board persistence remain future work. Provider image URLs are intentionally omitted pending rights review. Free-plan season-specific league data is limited to 2022–2024; current squad lookup works independently of season.
 
 ## Development
 
@@ -12,4 +12,5 @@ See [Local Development](docs/operations/local-development.md) for prerequisites,
 - [Implementation plan](docs/roadmap/implementation-plan.md)
 - [Iteration status](docs/roadmap/iteration-status.md)
 - [Proposed architecture](docs/architecture/architecture.md)
+- [Current API contracts](docs/architecture/api-contracts.md)
 - [Provider decision record](docs/decisions/ADR-002-football-data-provider.md)

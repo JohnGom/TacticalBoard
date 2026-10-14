@@ -1,14 +1,9 @@
-import Fastify from "fastify";
-import type { HealthResponse } from "@tactical-board/contracts";
+import "dotenv/config";
+import { createApp } from "./app.js";
 
-const app = Fastify({ logger: true });
+const app = createApp();
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "127.0.0.1";
-
-app.get<{ Reply: HealthResponse }>("/api/health", async () => ({
-  status: "ok",
-  service: "api",
-}));
 
 try {
   await app.listen({ port, host });

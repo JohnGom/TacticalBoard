@@ -1,6 +1,6 @@
 # Architecture — Proposed Baseline
 
-**Status:** Proposed; web/API foundation approved to begin. Authentication, hosting, provider, and database vendor/region are not selected.
+**Status:** Web/API baseline implemented. API-Football Free is provisionally integrated for local team and current-squad lookup. Authentication, hosting, database vendor/region, and publication/data-retention rights remain undecided.
 
 ## System shape
 
@@ -11,7 +11,7 @@ React web client (SVG presentation)
 Node.js / TypeScript modular monolith
   ├── authentication and ownership (later iteration)
   ├── board/team application services
-  ├── provider-neutral football data port
+  ├── provider-neutral football data port (API-Football adapter)
   └── PostgreSQL repository (later iteration)
 ```
 
@@ -31,7 +31,9 @@ These are implementation defaults, not a final hosting/authentication decision. 
 
 Persist positions in normalized pitch coordinates independent of viewport dimensions. Each player and tactical object has a stable internal ID. Formation metadata records the selected template; it does not constrain subsequent user positions. Store enough team/player snapshot data with each board to preserve context if an external record changes or becomes unavailable.
 
-Provider adapters map external identifiers and nullable/inconsistent fields into internal team/player contracts. The web client never calls a private provider API directly. External images are optional presentation data and require rights validation independent of API availability.
+Provider adapters map external identifiers and nullable/inconsistent fields into internal team/player contracts. The API-Football key stays server-side; the web client calls only the local API. Current-team and squad responses are cached in process for five minutes to avoid repeat quota use. Squad records are deduplicated by provider player ID. External images are omitted pending separate rights validation. The Free plan does not grant permission to publish third-party data, and private-board snapshot retention still needs clarification before cloud persistence.
+
+The current read-only integration exposes team search and current-squad lookup under `/api/football`; request/response details and safe error codes are documented in [API contracts](api-contracts.md). The API binds to loopback by default and must not be exposed publicly before authentication and quota controls exist.
 
 ## Mobile readiness
 
