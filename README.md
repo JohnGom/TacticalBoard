@@ -1,6 +1,6 @@
 # TacticalBoard
 
-A web-first football tactics platform. The local editor supports formations, free player positioning, and API-Football Free team/current-squad lookup. Authentication, custom-team management, and cloud board persistence remain future work. Provider image URLs are intentionally omitted pending rights review. Free-plan season-specific league data is limited to 2022–2024; current squad lookup works independently of season.
+A web-first football tactics platform. The public landing page leads into email/password accounts, with optional Google sign-in when server credentials are configured. Authenticated users can save private boards and custom teams in local PostgreSQL, restore and edit board state, and choose real squads or custom rosters before entering the editor. The editor supports formations, free positioning, and substitutions. Provider images remain omitted pending rights review. API-Football Free season-specific league data is limited to 2022–2024, while its current-squad endpoint works independently of season.
 
 ## Development
 
@@ -9,6 +9,7 @@ See [Local Development](docs/operations/local-development.md) for prerequisites,
 ## Planning
 
 - [Product vision](docs/product/vision.md)
+- [User flows](docs/product/user-flows.md)
 - [Implementation plan](docs/roadmap/implementation-plan.md)
 - [Iteration status](docs/roadmap/iteration-status.md)
 - [Proposed architecture](docs/architecture/architecture.md)

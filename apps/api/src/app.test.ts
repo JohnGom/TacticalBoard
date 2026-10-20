@@ -37,7 +37,7 @@ class FakeProvider implements FootballDataProvider {
 }
 
 test("team search validates input and returns normalized data", async () => {
-  const app = createApp(new FakeProvider());
+  const app = createApp({ provider: new FakeProvider() });
   try {
     const invalid = await app.inject({ method: "GET", url: "/api/football/teams?query=ab" });
     assert.equal(invalid.statusCode, 400);
@@ -51,7 +51,7 @@ test("team search validates input and returns normalized data", async () => {
 });
 
 test("squad route accepts numeric provider IDs and maps errors safely", async () => {
-  const app = createApp(new FakeProvider());
+  const app = createApp({ provider: new FakeProvider() });
   try {
     const result = await app.inject({ method: "GET", url: "/api/football/teams/541/squad" });
     assert.equal(result.statusCode, 200);

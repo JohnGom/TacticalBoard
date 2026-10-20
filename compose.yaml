@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tacticalboard}
+      POSTGRES_USER: ${POSTGRES_USER:-tacticalboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tacticalboard-local-only}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - tacticalboard-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  tacticalboard-postgres-data:

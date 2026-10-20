@@ -1,6 +1,6 @@
 # Implementation Plan — Football Tactics Platform
 
-**Status:** Proposed and approved to begin Iteration 1. Provider, hosting, authentication, and production budget remain undecided.
+**Status:** Iterations 1 and 6 implemented locally; account/workspace implementation is in progress. Production hosting and public data-rights decisions remain open.
 
 ## Product outcome
 
@@ -75,10 +75,10 @@ Historical match selection; official match lineups and substitutions; live data;
 10. **Done:** state remains consistent through undo/redo; export behavior documented.
 11. **Risks/rollback:** browser export differences; retain SVG export as a fallback.
 
-### 4. Custom teams and lineups
+### 4. Custom teams and lineups — pre-pitch setup slice implemented; persistence remains later
 
-1. **Goal/value:** make boards reusable without external data.
-2. **Scope/exclusions:** teams, colors, custom players, numbers, positions, starters, substitutes, swaps.
+1. **Goal/value:** let users choose a real/custom roster before opening the pitch and support non-provider teams.
+2. **Scope/exclusions:** in-memory team name/color, 11 custom starters with names/numbers/positions, substitutes, and swaps; persistence remains in Iteration 5.
 3. **Dependencies:** Iterations 2–3.
 4. **Deliverables:** team editor and lineup/bench management.
 5. **Likely modules/files:** `apps/web/src/teams`, `packages/domain/src/teams`.
@@ -89,18 +89,18 @@ Historical match selection; official match lineups and substitutions; live data;
 10. **Done:** roster changes do not reset unrelated board positions/elements.
 11. **Risks/rollback:** divergence between roster and board; retain player snapshots in board state.
 
-### 5. Accounts and cloud workspaces
+### 5. Accounts and private workspaces — local implementation in progress
 
-1. **Goal/value:** save and restore private boards across devices.
-2. **Scope/exclusions:** authentication and private board/team CRUD; no sharing/collaboration.
-3. **Dependencies:** Iteration 4; approve auth and hosting choices first.
-4. **Deliverables:** account flows, workspace list, save/open/rename/duplicate/delete.
+1. **Goal/value:** save and restore private boards and custom teams for a signed-in user.
+2. **Scope/exclusions:** local authentication and private board/team CRUD; no sharing/collaboration or production hosting.
+3. **Dependencies:** email/password with optional Google OAuth and local PostgreSQL selected for this implementation slice; production hosting remains unselected.
+4. **Deliverables:** public landing, account flows, workspace list, save/open/rename/duplicate/delete, custom team library.
 5. **Likely modules/files:** `apps/api/src/auth`, `boards`, `teams`, migrations, workspace UI.
-6. **Database/API:** PostgreSQL; owner-scoped `/api/v1` contracts; versioned JSONB board snapshots.
+6. **Database/API:** local PostgreSQL; owner-scoped `/api` contracts; versioned JSONB board snapshots and additive migrations.
 7. **Security:** server-derived identity; ownership checks on every operation; secure sessions and safe errors.
-8. **Tests:** migrations, board round-trip, concurrent revision behavior, cross-user denial for all CRUD operations.
+8. **Tests:** migrations, board round-trip, stale revision conflict, cross-user denial.
 9. **Acceptance:** restored board retains all supported editable state; one user cannot access another's private resources.
-10. **Done:** migrations, backup/restore notes, ownership tests, loading/error/empty/success UI states.
+10. **Done:** migrations, ownership tests, loading/error/empty/success UI states, and verified local account-to-board round trip. Production backup/restore remains for deployment work.
 11. **Risks/rollback:** schema migration/data loss; additive migrations and tested restore path.
 
 ### 6. External football data — local Free-plan integration implemented; publication gate open

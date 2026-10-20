@@ -1,80 +1,34 @@
-import { useEffect, useState } from "react";
-import type { HealthResponse } from "@tactical-board/contracts";
-import { TacticalEditor } from "../editor/TacticalEditor";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
+import { AccountPage } from "../pages/AccountPage";
+import { NewBoardPage, SavedBoardPage } from "../pages/BoardPages";
+import { LandingPage } from "../pages/LandingPage";
+import { CustomTeamPage, TeamsPage } from "../pages/TeamsPage";
+import { WorkspacePage } from "../pages/WorkspacePage";
 
-type ApiStatus = "checking" | "online" | "offline";
+function PrivateRoutes() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-function isHealthResponse(value: unknown): value is HealthResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "status" in value &&
-    value.status === "ok" &&
-    "service" in value &&
-    value.service === "api"
-  );
+  if (loading) return <main className="auth-loading" role="status">Comprobando tu espacio…</main>;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  return <Outlet />;
 }
 
 export function App() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>("checking");
-
-  useEffect(() => {
-    let active = true;
-
-    fetch("/api/health")
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error("API health check failed");
-        }
-
-        const payload: unknown = await response.json();
-        if (!isHealthResponse(payload)) {
-          throw new Error("Unexpected API health response");
-        }
-
-        return payload;
-      })
-      .then((health) => {
-        if (active) {
-          setApiStatus(health.status === "ok" ? "online" : "offline");
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setApiStatus("offline");
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const statusLabel = {
-    checking: "Checking local API",
-    online: "Local API connected",
-    offline: "Local API unavailable",
-  }[apiStatus];
-
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="/" aria-label="TacticalBoard home">
-          <span className="brand-mark" aria-hidden="true"><span /><span /><span /><span /></span>
-          <span>TacticalBoard</span>
-        </a>
-        <span className={`status status--${apiStatus}`} role="status">
-          <span className="status-dot" aria-hidden="true" />
-          {statusLabel}
-        </span>
-      </header>
-
-      <TacticalEditor />
-
-      <footer className="page-footer">
-        <span>Made for the game between the lines.</span>
-        <span>Web-first · Provider independent</span>
-      </footer>
-    </div>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<AccountPage mode="login" />} />
+      <Route path="/register" element={<AccountPage mode="register" />} />
+      <Route element={<PrivateRoutes />}>
+        <Route path="/app" element={<WorkspacePage />} />
+        <Route path="/app/boards/new" element={<NewBoardPage />} />
+        <Route path="/app/boards/:boardId" element={<SavedBoardPage />} />
+        <Route path="/app/teams" element={<TeamsPage />} />
+        <Route path="/app/teams/:teamId" element={<CustomTeamPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

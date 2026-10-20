@@ -36,6 +36,7 @@ function isFootballDataErrorResponse(value: unknown): value is FootballDataError
     return false;
   }
   return [
+    "authentication_required",
     "provider_not_configured",
     "provider_rate_limited",
     "provider_unavailable",

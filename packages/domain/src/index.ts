@@ -17,10 +17,18 @@ export interface NormalizedPitchPoint {
   y: number;
 }
 
-export interface BoardPlayer {
+export interface RosterPlayer {
   id: string;
   snapshot: PlayerSnapshot;
+}
+
+export interface BoardPlayer extends RosterPlayer {
   position: NormalizedPitchPoint;
+}
+
+export interface FormationLineup {
+  players: BoardPlayer[];
+  bench: RosterPlayer[];
 }
 
 export interface FormationSlot {
@@ -71,6 +79,36 @@ export const FORMATIONS = {
 } satisfies Record<string, readonly FormationSlot[]>;
 
 export type FormationName = keyof typeof FORMATIONS;
+
+function positionGroup(position: string | null): string | null {
+  const normalized = position?.toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes("goalkeeper") || normalized.includes("keeper") || normalized === "gk" || normalized.includes("portero") || normalized.includes("guardameta")) return "Goalkeeper";
+  if (normalized.includes("defender") || normalized.includes("defence") || normalized.includes("defense") || normalized.includes("back") || normalized.includes("defensa") || normalized.includes("lateral")) return "Defender";
+  if (normalized.includes("midfield") || normalized === "midfielder" || normalized.includes("centrocampista") || normalized.includes("mediocampista")) return "Midfielder";
+  if (normalized.includes("forward") || normalized.includes("attacker") || normalized.includes("striker") || normalized.includes("winger") || normalized.includes("delantero") || normalized.includes("extremo")) return "Forward";
+  return null;
+}
+
+/** Places available roster members into formation slots by position, then returns the rest as substitutes. */
+export function createLineupFromRoster(
+  formation: FormationName,
+  roster: readonly RosterPlayer[],
+): FormationLineup {
+  const remaining = [...roster];
+  const players: BoardPlayer[] = [];
+
+  for (const slot of FORMATIONS[formation]) {
+    if (remaining.length === 0) break;
+    const matchingIndex = remaining.findIndex(
+      (player) => positionGroup(player.snapshot.position) === slot.role,
+    );
+    const [player] = remaining.splice(matchingIndex >= 0 ? matchingIndex : 0, 1);
+    if (player) players.push({ ...player, position: { ...slot.position } });
+  }
+
+  return { players, bench: remaining };
+}
 
 export function clampPitchPoint(point: NormalizedPitchPoint): NormalizedPitchPoint {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
@@ -147,6 +185,30 @@ export function replaceBoardPlayer(
       ? { ...player, id: createId(), snapshot: { ...snapshot } }
       : player,
   );
+}
+
+export function substituteBoardPlayer(
+  players: readonly BoardPlayer[],
+  bench: readonly RosterPlayer[],
+  boardPlayerId: string,
+  benchPlayerId: string,
+): FormationLineup {
+  const currentPlayer = players.find((player) => player.id === boardPlayerId);
+  const replacement = bench.find((player) => player.id === benchPlayerId);
+  if (!currentPlayer) throw new Error(`Player ${boardPlayerId} is not on this board`);
+  if (!replacement) throw new Error(`Substitute ${benchPlayerId} is not on this bench`);
+
+  return {
+    players: players.map((player) =>
+      player.id === boardPlayerId
+        ? { ...replacement, position: { ...currentPlayer.position } }
+        : player,
+    ),
+    bench: [
+      ...bench.filter((player) => player.id !== benchPlayerId),
+      { id: currentPlayer.id, snapshot: currentPlayer.snapshot },
+    ],
+  };
 }
 
 /** Domain-facing port; concrete provider transport stays in the API infrastructure layer. */

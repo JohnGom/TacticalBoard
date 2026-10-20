@@ -1,11 +1,13 @@
-import { useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import type { BoardPlayer, NormalizedPitchPoint } from "@tactical-board/domain";
+import { playerPositionLabel } from "../ui/labels";
 
 export type PitchView = "full" | "half";
 
 interface PitchProps {
   players: readonly BoardPlayer[];
   selectedPlayerId: string;
+  teamColor: string;
   view: PitchView;
   onSelectPlayer: (playerId: string) => void;
   onMovePlayer: (playerId: string, position: NormalizedPitchPoint) => void;
@@ -14,6 +16,7 @@ interface PitchProps {
 export function Pitch({
   players,
   selectedPlayerId,
+  teamColor,
   view,
   onSelectPlayer,
   onMovePlayer,
@@ -76,8 +79,9 @@ export function Pitch({
       ref={svgRef}
       className={`pitch-svg pitch-svg--${view}`}
       viewBox={`0 0 ${width} 64`}
+      style={{ "--team-color": teamColor } as CSSProperties}
       role="group"
-      aria-label={`${view === "full" ? "Full" : "Half"} football pitch. Use arrow keys to move the focused player.`}
+      aria-label={`${view === "full" ? "Cancha completa" : "Media cancha"}. Usa las flechas para mover al jugador enfocado.`}
       onPointerMove={handlePointerMove}
       onPointerUp={stopDragging}
       onPointerCancel={stopDragging}
@@ -110,7 +114,7 @@ export function Pitch({
       {players.map((player) => {
         const isSelected = player.id === selectedPlayerId;
         const shirtNumber = player.snapshot.shirtNumber ?? "–";
-        const label = `${player.snapshot.name}, ${player.snapshot.position ?? "Player"}, number ${shirtNumber}`;
+        const label = `${player.snapshot.name}, ${playerPositionLabel(player.snapshot.position)}, dorsal ${shirtNumber}`;
 
         return (
           <g

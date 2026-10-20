@@ -1,5 +1,9 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import "@fontsource-variable/space-grotesk";
+import "@fontsource-variable/dm-sans";
+import { AuthProvider } from "./auth/AuthProvider";
 import { App } from "./ui/App";
 import "./ui/styles.css";
 
@@ -11,6 +15,10 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>,
 );

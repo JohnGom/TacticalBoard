@@ -3,10 +3,12 @@ import { test } from "node:test";
 import {
   applyFormation,
   clampPitchPoint,
+  createLineupFromRoster,
   createFormationPlayers,
   FORMATIONS,
   movePlayer,
   replaceBoardPlayer,
+  substituteBoardPlayer,
   type FormationName,
 } from "./index.js";
 
@@ -92,4 +94,59 @@ test("replacing a player gives the replacement a stable ID and preserves their p
     providerId: "9876",
   });
   assert.deepEqual(replaced.slice(0, 4), moved.slice(0, 4));
+});
+
+test("roster players are assigned to matching formation roles and remaining players go to the bench", () => {
+  const roster = [
+    ...Array.from({ length: 3 }, (_, index) => ({
+      id: `forward-${index}`,
+      snapshot: { name: `Forward ${index}`, shirtNumber: index + 9, position: "Forward", providerReference: null },
+    })),
+    { id: "keeper", snapshot: { name: "Keeper", shirtNumber: 1, position: "Goalkeeper", providerReference: null } },
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `defender-${index}`,
+      snapshot: { name: `Defender ${index}`, shirtNumber: index + 2, position: "Defender", providerReference: null },
+    })),
+    ...Array.from({ length: 3 }, (_, index) => ({
+      id: `midfielder-${index}`,
+      snapshot: { name: `Midfielder ${index}`, shirtNumber: index + 6, position: "Midfielder", providerReference: null },
+    })),
+    ...Array.from({ length: 2 }, (_, index) => ({
+      id: `substitute-${index}`,
+      snapshot: { name: `Substitute ${index}`, shirtNumber: index + 12, position: "Defender", providerReference: null },
+    })),
+  ];
+
+  const result = createLineupFromRoster("4-3-3", roster);
+
+  assert.equal(result.players.length, 11);
+  assert.equal(result.bench.length, 2);
+  assert.equal(result.players[0]?.snapshot.position, "Goalkeeper");
+  assert.deepEqual(
+    result.players.map((player) => player.id).sort(),
+    roster.filter((player) => !player.id.startsWith("substitute-")).map((player) => player.id).sort(),
+  );
+});
+
+test("substitutions keep the pitch slot and move the outgoing player to the bench", () => {
+  const starters = createFormationPlayers("4-3-3", createIdFactory());
+  const movedStarters = movePlayer(starters, starters[0]!.id, { x: 0.17, y: 0.43 });
+  const substitute = {
+    id: "sub-player",
+    snapshot: {
+      name: "Substitute Keeper",
+      shirtNumber: 22,
+      position: "Goalkeeper",
+      providerReference: null,
+    },
+  };
+
+  const result = substituteBoardPlayer(movedStarters, [substitute], starters[0]!.id, substitute.id);
+
+  assert.equal(result.players[0]?.id, substitute.id);
+  assert.deepEqual(result.players[0]?.position, { x: 0.17, y: 0.43 });
+  assert.equal(result.players[0]?.snapshot.name, "Substitute Keeper");
+  assert.equal(result.bench.length, 1);
+  assert.equal(result.bench[0]?.id, starters[0]!.id);
+  assert.equal(result.bench[0]?.snapshot.name, "Player 1");
 });
