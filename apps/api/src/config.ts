@@ -14,7 +14,7 @@ export interface RuntimeConfig {
 export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
   const nodeEnv = env.NODE_ENV ?? "development";
   const development = nodeEnv !== "production";
-  const appOrigin = (env.APP_ORIGIN?.trim() || "http://127.0.0.1:5173").replace(/\/$/, "");
+  const appOrigin = (env.APP_ORIGIN?.trim() || "http://localhost:5173").replace(/\/$/, "");
   const databaseUrl = env.DATABASE_URL?.trim() || (development
     ? "postgresql://tacticalboard:tacticalboard-local-only@127.0.0.1:5434/tacticalboard"
     : "");

@@ -11,7 +11,7 @@ import { runMigrations } from "../db/migrations.js";
 import { createApp } from "../app.js";
 import { WorkspaceService } from "../services/workspace-service.js";
 
-const localOrigin = "http://127.0.0.1:5173";
+const localOrigin = "http://localhost:5173";
 
 function cookieFrom(response: { headers: OutgoingHttpHeaders }): string {
   const setCookie = response.headers["set-cookie"];

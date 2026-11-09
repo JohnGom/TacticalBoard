@@ -4,4 +4,6 @@ coverage/
 .env
 .env.*
 !.env.example
+client_secret*.json
+.taste-skill/
 .DS_Store
