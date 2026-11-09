@@ -18,6 +18,11 @@ function isBoardDraft(value: unknown): value is BoardDraft {
     Array.isArray(draft.bench);
 }
 
+function customTeamIdFromState(value: unknown): string | null {
+  if (typeof value !== "object" || value === null || !("customTeamId" in value)) return null;
+  return typeof value.customTeamId === "string" ? value.customTeamId : null;
+}
+
 function draftFromSavedBoard(state: BoardStateV1): BoardDraft {
   return {
     teamName: state.team.name,
@@ -39,12 +44,16 @@ export function NewBoardPage() {
   const draft = typeof locationState === "object" && locationState !== null && "draft" in locationState
     ? (locationState as { draft: unknown }).draft
     : null;
+  const initialSavedTeamId = customTeamIdFromState(locationState);
 
   if (!isBoardDraft(draft)) {
     return (
       <>
         <PrivateNav />
-        <BoardSetup onStartBoard={(nextDraft) => navigate("/app/boards/new", { state: { draft: nextDraft }, replace: true })} />
+        <BoardSetup
+          initialSavedTeamId={initialSavedTeamId}
+          onStartBoard={(nextDraft) => navigate("/app/boards/new", { state: { draft: nextDraft }, replace: true })}
+        />
       </>
     );
   }

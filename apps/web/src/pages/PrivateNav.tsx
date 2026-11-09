@@ -22,8 +22,8 @@ export function PrivateNav() {
     <header className="private-nav">
       <Brand />
       <nav className="private-nav__links" aria-label="Espacio de trabajo">
-        <NavLink end to="/app">Pizarras</NavLink>
-        <NavLink to="/app/teams">Equipos</NavLink>
+        <NavLink className={({ isActive }) => isActive ? "is-current" : undefined} end to="/app">Pizarras</NavLink>
+        <NavLink className={({ isActive }) => isActive ? "is-current" : undefined} to="/app/teams">Equipos</NavLink>
       </nav>
       <div className="private-nav__account">
         <span className="private-nav__user">{user?.displayName ?? user?.email}</span>

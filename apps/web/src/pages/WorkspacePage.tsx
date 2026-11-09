@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SavedBoardSummary, SavedCustomTeam } from "@tactical-board/contracts";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthProvider";
+import { Link } from "react-router-dom";
 import { deleteBoard, deleteCustomTeam, duplicateBoard, listBoards, listCustomTeams } from "../data/workspace-client";
-import { Brand } from "../ui/Brand";
+import { PrivateNav } from "./PrivateNav";
 
 interface WorkspaceData {
   boards: SavedBoardSummary[];
@@ -11,8 +10,6 @@ interface WorkspaceData {
 }
 
 export function WorkspacePage() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const [data, setData] = useState<WorkspaceData>({ boards: [], teams: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,24 +61,9 @@ export function WorkspacePage() {
     }
   }
 
-  async function handleSignOut() {
-    await signOut();
-    navigate("/", { replace: true });
-  }
-
   return (
     <main className="workspace-page">
-      <header className="private-nav">
-        <Brand />
-        <nav className="private-nav__links" aria-label="Tu espacio">
-          <Link className="is-current" to="/app">Pizarras</Link>
-          <a href="#equipos">Equipos</a>
-        </nav>
-        <div className="private-nav__account">
-          <span className="private-nav__user">{user?.displayName ?? user?.email}</span>
-          <button className="quiet-button" onClick={() => void handleSignOut()} type="button">Cerrar sesión</button>
-        </div>
-      </header>
+      <PrivateNav />
 
       <section className="workspace-heading">
         <div>
@@ -150,7 +132,7 @@ export function WorkspacePage() {
                   <article className="saved-team-row" key={team.id}>
                     <span className="saved-team-row__swatch" style={{ backgroundColor: team.primaryColor }} aria-hidden="true" />
                     <div className="saved-team-row__info"><strong>{team.name}</strong><small>{team.playerCount} jugadores</small></div>
-                    <Link to="/app/boards/new">Usar en una pizarra</Link>
+                    <Link to="/app/boards/new" state={{ customTeamId: team.id }}>Usar en una pizarra</Link>
                     <button onClick={() => setPendingDelete({ kind: "team", id: team.id })} type="button">Eliminar</button>
                     {pendingDelete?.kind === "team" && pendingDelete.id === team.id && (
                       <div className="inline-confirm" role="group" aria-label={`Confirmar eliminación de ${team.name}`}>

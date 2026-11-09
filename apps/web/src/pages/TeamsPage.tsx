@@ -59,7 +59,7 @@ export function TeamsPage() {
               <p>{team.playerCount} jugadores en el plantel</p>
               <div className="team-library-card__actions">
                 <Link to={`/app/teams/${team.id}`}>Editar equipo</Link>
-                <Link to="/app/boards/new">Usar en una pizarra</Link>
+                <Link to="/app/boards/new" state={{ customTeamId: team.id }}>Usar en una pizarra</Link>
               </div>
             </article>
           ))}

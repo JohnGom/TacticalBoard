@@ -131,4 +131,49 @@ describe("pre-pitch team setup", () => {
     expect(draft.bench[0]?.snapshot.name).toBe("Bench Player");
     expect(draft.players.every((player) => player.snapshot.providerReference === null)).toBe(true);
   });
+
+  test("opens a requested saved team at formation selection without asking for a team source", async () => {
+    const onStartBoard = vi.fn();
+    const teamId = "8fd38fba-4856-45a4-8a23-f9df3d990a79";
+    const roster = Array.from({ length: 11 }, (_, index) => ({
+      id: `saved-player-${index + 1}`,
+      snapshot: {
+        name: `Saved Player ${index + 1}`,
+        shirtNumber: index + 1,
+        position: index === 0 ? "Goalkeeper" : index < 5 ? "Defender" : index < 8 ? "Midfielder" : "Forward",
+        providerReference: null,
+      },
+    }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const team = {
+        id: teamId,
+        name: "Barrio FC",
+        primaryColor: "#2b684a",
+        playerCount: roster.length,
+        createdAt: "2026-10-14T00:00:00.000Z",
+        updatedAt: "2026-10-14T00:00:00.000Z",
+      };
+      const body = url === "/api/teams"
+        ? { teams: [team] }
+        : { team: { ...team, roster } };
+      return { ok: true, json: async () => body } as Response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<BoardSetup initialSavedTeamId={teamId} onStartBoard={onStartBoard} />);
+
+    expect(await screen.findByRole("heading", { name: "Barrio FC" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /usar un equipo real/i })).toBeNull();
+    expect(screen.getByLabelText("Formación inicial")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Formación inicial"), { target: { value: "4-4-2" } });
+    fireEvent.click(screen.getByRole("button", { name: /entrar a la cancha/i }));
+
+    await waitFor(() => expect(onStartBoard).toHaveBeenCalledTimes(1));
+    const draft = onStartBoard.mock.calls[0]?.[0] as BoardDraft;
+    expect(draft.teamId).toBe(teamId);
+    expect(draft.teamName).toBe("Barrio FC");
+    expect(draft.formation).toBe("4-4-2");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

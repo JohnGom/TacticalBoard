@@ -1107,7 +1107,7 @@ a:focus-visible {
 .pitch-player-tooltip strong { overflow-wrap: anywhere; color: #1b3024; font-size: 14px; font-weight: 700; line-height: 1.3; }
 .pitch-player-tooltip span { color: #58685c; font-size: 13px; line-height: 1.3; }
 
-.editor-sidebar { border-radius: 16px; }
+.editor-sidebar { border-radius: 16px; margin-top: 16px; }
 .sidebar-section { padding: 23px 22px; }
 .section-title-row h2 { font-size: 18px; letter-spacing: -.3px; }
 .count-pill { min-width: 28px; height: 26px; border-radius: 7px; font-size: var(--type-label); }
@@ -1526,3 +1526,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 @media (prefers-reduced-motion: reduce) {
   .nav-create, .public-nav__links a, .nav-login, .text-link, .button-text-light { transition: none; }
 }
+
+/* Keep the editor workspace inset while the tactical tools remain docked on the right. */
+.editor { column-gap: 0; }
+.editor-main { padding-inline: 32px; }
+.private-nav__account { padding-right: clamp(12px, 2vw, 24px); }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { CustomTeamDetails, FootballPlayerSummary, FootballTeamSummary, SavedCustomTeam } from "@tactical-board/contracts";
 import {
   createLineupFromRoster,
@@ -29,6 +29,7 @@ interface EditablePlayer {
 }
 
 interface BoardSetupProps {
+  initialSavedTeamId?: string | null;
   onStartBoard: (draft: BoardDraft) => void | Promise<void>;
 }
 
@@ -74,8 +75,8 @@ function toRosterPlayer(player: FootballPlayerSummary): RosterPlayer {
   };
 }
 
-export function BoardSetup({ onStartBoard }: BoardSetupProps) {
-  const [step, setStep] = useState<"choose" | "real" | "custom" | "saved">("choose");
+export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSetupProps) {
+  const [step, setStep] = useState<"choose" | "real" | "custom" | "saved">(initialSavedTeamId ? "saved" : "choose");
   const [formation, setFormation] = useState<FormationName>("4-3-3");
   const [teamQuery, setTeamQuery] = useState("");
   const [teamResults, setTeamResults] = useState<FootballTeamSummary[]>([]);
@@ -88,17 +89,55 @@ export function BoardSetup({ onStartBoard }: BoardSetupProps) {
   const [customTeamName, setCustomTeamName] = useState("");
   const [customColor, setCustomColor] = useState("#a9cbb4");
   const [customPlayers, setCustomPlayers] = useState<EditablePlayer[]>(createEmptyCustomRoster);
-  const [busy, setBusy] = useState<"search" | "squad" | "saving" | null>(null);
+  const [busy, setBusy] = useState<"search" | "squad" | "saving" | null>(initialSavedTeamId ? "squad" : null);
   const [error, setError] = useState<string | null>(null);
+
+  const loadSavedTeam = useCallback(async (
+    team: SavedCustomTeam,
+    isCurrent: () => boolean = () => true,
+  ) => {
+    if (!isCurrent()) return;
+    setSelectedSavedTeam(team);
+    setLoadedSavedTeam(null);
+    setStep("saved");
+    setBusy("squad");
+    setError(null);
+    try {
+      const details = await getCustomTeam(team.id);
+      if (isCurrent()) setLoadedSavedTeam(details);
+    } catch (cause) {
+      if (isCurrent()) setError(cause instanceof Error ? cause.message : "No se pudo cargar el equipo guardado.");
+    } finally {
+      if (isCurrent()) setBusy(null);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
     listCustomTeams()
-      .then((teams) => { if (active) setSavedTeams(teams); })
-      .catch(() => { if (active) setSavedTeams([]); })
+      .then((teams) => {
+        if (!active) return;
+        setSavedTeams(teams);
+        if (initialSavedTeamId) {
+          const team = teams.find((savedTeam) => savedTeam.id === initialSavedTeamId);
+          if (team) void loadSavedTeam(team, () => active);
+          else {
+            setError("No se encontró el equipo guardado. Elige otro equipo para continuar.");
+            setBusy(null);
+          }
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setSavedTeams([]);
+        if (initialSavedTeamId) {
+          setError("No se pudo cargar el equipo solicitado.");
+          setBusy(null);
+        }
+      })
       .finally(() => { if (active) setSavedTeamsLoaded(true); });
     return () => { active = false; };
-  }, []);
+  }, [initialSavedTeamId, loadSavedTeam]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,22 +176,6 @@ export function BoardSetup({ onStartBoard }: BoardSetupProps) {
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar el plantel.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function handleLoadSavedTeam(team: SavedCustomTeam) {
-    setSelectedSavedTeam(team);
-    setLoadedSavedTeam(null);
-    setStep("saved");
-    setBusy("squad");
-    setError(null);
-    try {
-      const details = await getCustomTeam(team.id);
-      setLoadedSavedTeam(details);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo cargar el equipo guardado.");
     } finally {
       setBusy(null);
     }
@@ -314,7 +337,7 @@ export function BoardSetup({ onStartBoard }: BoardSetupProps) {
               </div>
               <div className="setup-saved-teams__list">
                 {savedTeams.map((team) => (
-                  <button className="saved-team-choice" key={team.id} onClick={() => void handleLoadSavedTeam(team)} type="button" disabled={busy !== null}>
+                  <button className="saved-team-choice" key={team.id} onClick={() => void loadSavedTeam(team)} type="button" disabled={busy !== null}>
                     <span className="saved-team-choice__swatch" style={{ backgroundColor: team.primaryColor }} aria-hidden="true" />
                     <span className="saved-team-choice__info"><strong>{team.name}</strong><small>{team.playerCount} jugadores</small></span>
                     <span aria-hidden="true">↗</span>
@@ -418,9 +441,10 @@ export function BoardSetup({ onStartBoard }: BoardSetupProps) {
         <section className="setup-card setup-card--form" aria-labelledby="saved-team-title">
           <button className="setup-back" type="button" onClick={() => { setStep("choose"); setError(null); }}>← Volver</button>
           <div className="eyebrow">EQUIPO PERSONALIZADO GUARDADO</div>
-          <h1 id="saved-team-title">{selectedSavedTeam?.name ?? "Cargando equipo…"}</h1>
+          <h1 id="saved-team-title">{selectedSavedTeam?.name ?? (error ? "Equipo no disponible" : "Cargando equipo…")}</h1>
           {busy === "squad" && <p className="provider-message" role="status">Cargando tu plantel…</p>}
           {error && <p className="setup-error" role="alert">{error}</p>}
+          {!selectedSavedTeam && error && <button className="setup-back" type="button" onClick={() => { setStep("choose"); setError(null); }}>← Elegir otro equipo</button>}
           {loadedSavedTeam && (
             <>
               <p className="setup-intro">{loadedSavedTeam.roster.length} jugadores · elige la formación para esta pizarra.</p>
