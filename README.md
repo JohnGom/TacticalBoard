@@ -6,6 +6,10 @@ A web-first football tactics platform. The public landing page leads into email/
 
 See [Local Development](docs/operations/local-development.md) for prerequisites, install, run, and checks.
 
+## Deployment
+
+See [Ubuntu Server Deployment](docs/operations/ubuntu-deployment.md) for the current manual deployment steps and production requirements.
+
 ## Planning
 
 - [Product vision](docs/product/vision.md)
