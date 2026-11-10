@@ -16,5 +16,45 @@ services:
       timeout: 3s
       retries: 12
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: ./apps/api/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tacticalboard}:${POSTGRES_PASSWORD:-tacticalboard-local-only}@postgres:5432/${POSTGRES_DB:-tacticalboard}
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+
 volumes:
   tacticalboard-postgres-data:

@@ -8,7 +8,7 @@ See [Local Development](docs/operations/local-development.md) for prerequisites,
 
 ## Deployment
 
-See [Ubuntu Server Deployment](docs/operations/ubuntu-deployment.md) for the current manual deployment steps and production requirements.
+See [Ubuntu Server Deployment](docs/operations/ubuntu-deployment.md) for Docker Compose deployment and production requirements.
 
 ## Planning
 

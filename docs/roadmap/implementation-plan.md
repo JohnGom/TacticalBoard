@@ -1,6 +1,6 @@
 # Implementation Plan — Football Tactics Platform
 
-**Status:** Iterations 1 and 6 implemented locally; account/workspace implementation is in progress. Production hosting and public data-rights decisions remain open.
+**Status:** Iterations 1 and 6 implemented locally; account/workspace implementation is in progress. An Ubuntu deployment target using Docker Compose and host Caddy is documented; production deployment and backup/restore verification remain outstanding. Public data-rights decisions remain open.
 
 ## Product outcome
 
@@ -118,6 +118,8 @@ Historical match selection; official match lineups and substitutions; live data;
 11. **Risks/rollback:** coverage/terms change; feature flag can disable provider search without affecting custom data.
 
 ### 7. Release quality and operations
+
+**Deployment slice:** Docker Compose packaging for the web, API, and PostgreSQL plus Ubuntu/Caddy operations documentation is implemented; image builds and local stack checks pass. Production deployment and backup/restore verification remain pending.
 
 1. **Goal/value:** ship a reliable web MVP.
 2. **Scope/exclusions:** deployment, accessibility, observability, performance, critical E2E; no new product features.

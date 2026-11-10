@@ -1,0 +1,16 @@
+.git
+.taste-skill
+.agents
+.claude
+node_modules
+**/node_modules
+**/dist
+coverage
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+**/client_secret*.json
+skills-lock.json
+docs

@@ -1,6 +1,6 @@
 # Iteration Status
 
-Updated: 2026-10-20
+Updated: 2026-11-10
 
 ## Iteration 1 — Foundation
 
@@ -77,7 +77,7 @@ Updated: 2026-10-20
 - [x] Add PostgreSQL integration coverage for registration/login, ownership isolation, restoration, logout, and stale revision behavior.
 - [x] Verify the latest migrations and database-backed account/workspace integration tests against a clean temporary PostgreSQL instance.
 - [x] Pass typecheck, all unit/integration tests, and production builds after the final code changes.
-- [ ] Apply the latest migration to the Docker Compose-managed development database when the Docker daemon is available.
+- [x] Verify the Compose-managed development database is at the latest migration version.
 - [ ] Manually verify responsive visual/editor behavior in desktop and phone browsers.
 
 ### Decisions and limits
@@ -97,6 +97,18 @@ The current shell resolves Node.js 24.21.0, which satisfies Vite's requirement. 
 - Data publication and long-term snapshot retention rights.
 - Production hosting, database region, backups, and deployment operations.
 - Confirmation that undo/redo and PNG export are MVP requirements.
+
+## Iteration 7 — Release quality and operations (deployment slice)
+
+**Status: Docker Compose deployment packaging and Ubuntu instructions implemented and locally verified; production server and backup/restore verification remain outstanding.** The stack defines the web, API, and persistent PostgreSQL services, with host Caddy terminating HTTPS and proxying to loopback-published ports.
+
+- [x] Add multistage Docker builds for the API and static web application.
+- [x] Add Compose services for web, API, and PostgreSQL with health checks, restart policies, and persistent database storage.
+- [x] Keep PostgreSQL, API, and web host ports bound to loopback for the host Caddy proxy.
+- [x] Document secret setup, production migrations, Caddy routing, updates, and database backups.
+- [x] Validate Compose configuration; pass typecheck, all tests including PostgreSQL persistence integration, production builds, and `git diff --check`.
+- [x] Build both container images, run the Compose stack, and verify API health, web response, and database readiness locally.
+- [ ] Verify production backup/restore and the deployed service on the target Ubuntu host.
 
 ## Iteration completion policy
 

@@ -1,20 +1,20 @@
 # Despliegue en un servidor Ubuntu
 
-Esta guía describe el despliegue actual de TacticalBoard en un servidor Ubuntu usando Caddy como proxy y servidor de archivos estáticos, Fastify como servicio local y PostgreSQL en Docker Compose. El repositorio todavía no incluye Dockerfiles ni un despliegue de aplicación con un solo comando.
+Esta guía despliega la web, la API y PostgreSQL con Docker Compose. Caddy permanece instalado en el host y termina HTTPS, enviando el tráfico a los puertos locales de los contenedores.
 
 ## 1. Preparar el servidor
 
-Usa una versión mantenida de Ubuntu, apunta el DNS del dominio a la IP del servidor y crea un usuario de servicio, por ejemplo `tacticalboard`.
+Usa una versión mantenida de Ubuntu, apunta el DNS del dominio a la IP del servidor y crea un usuario de servicio, por ejemplo `tacticalboard`:
 
 ```sh
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git curl gnupg ca-certificates
+sudo apt install -y git curl ca-certificates gnupg
 sudo adduser --system --group --home /home/tacticalboard --shell /usr/sbin/nologin tacticalboard
 sudo mkdir -p /opt/tacticalboard
 sudo chown tacticalboard:tacticalboard /opt/tacticalboard
 ```
 
-Instala Docker Engine con Docker Compose v2, Caddy y Node.js 22.12 o superior desde sus fuentes oficiales. Si Caddy aún no está instalado, usa el repositorio oficial para Ubuntu:
+Instala Docker Engine con el plugin Docker Compose v2 siguiendo las instrucciones oficiales de Docker para Ubuntu. Si Caddy aún no está instalado, usa el repositorio oficial:
 
 ```sh
 sudo apt install --yes debian-keyring debian-archive-keyring apt-transport-https
@@ -26,69 +26,43 @@ sudo apt update
 sudo apt install caddy
 ```
 
-Si ya usas Caddy, conserva su instalación y su `Caddyfile`; más adelante solo añadirás un bloque para TacticalBoard.
+Si ya usas Caddy, conserva su instalación y su `Caddyfile`; más adelante solo añadirás un bloque para TacticalBoard. No hace falta instalar Node.js ni pnpm en el host: la imagen de la aplicación contiene sus versiones fijadas.
 
-Después de instalar Node.js, habilita Corepack para usar la versión de pnpm fijada por el repositorio:
+Permite SSH y los puertos web 80/443 para Caddy. Los puertos de web, API y PostgreSQL publicados por Compose se enlazan solo a `127.0.0.1`; no los abras al exterior. Ejecuta los comandos de Docker con `sudo` o configura el acceso al daemon según la política del servidor. La pertenencia al grupo `docker` equivale a privilegios de root.
 
-```sh
-sudo corepack enable
-```
+## 2. Descargar el proyecto
 
-Configura también:
-
-- Un dominio apuntando al servidor.
-- SSH con clave pública.
-- Node.js 22.12 o superior; se recomienda Node.js 24 LTS.
-- pnpm 10.x (el monorepo fija pnpm 10.8.0 en `package.json`).
-- Docker Engine con Docker Compose v2, Git y Caddy.
-
-Permite en el firewall SSH y los puertos web 80/443 para Caddy. No abras PostgreSQL al público. Docker debe quedar accesible para el usuario que ejecutará el comando de base de datos.
-
-## 2. Descargar el proyecto e instalar dependencias
-
-Configura una clave SSH de solo lectura para el repositorio privado, si corresponde. Clona el repositorio como el usuario de servicio y ejecuta pnpm con ese mismo usuario:
+Configura una clave SSH de solo lectura para el repositorio privado, si corresponde. Clona el repositorio como usuario de servicio:
 
 ```sh
 sudo -u tacticalboard -H git clone <URL_DEL_REPOSITORIO> /opt/tacticalboard
-sudo -u tacticalboard -H sh -lc 'cd /opt/tacticalboard && corepack prepare pnpm@10.8.0 --activate && pnpm install --frozen-lockfile'
 ```
 
-El API importa los paquetes internos `@tactical-board/contracts` y `@tactical-board/domain` desde sus fuentes TypeScript. Por eso, para el modo de ejecución documentado más abajo hay que conservar la dependencia de desarrollo `tsx`; **no ejecutes `pnpm install --prod`** con esta configuración.
+## 3. Configurar los secretos
 
-## 3. Configurar secretos y PostgreSQL
+Compose lee los valores de PostgreSQL desde `.env` en la raíz. El contenedor de API lee sus credenciales de `apps/api/.env`; Compose configura `DATABASE_URL` por encima del valor de ese archivo para conectarse al servicio interno `postgres`.
 
-Hay dos archivos de entorno distintos:
+```sh
+cd /opt/tacticalboard
+sudo -u tacticalboard cp .env.example .env
+sudo -u tacticalboard cp apps/api/.env.example apps/api/.env
+sudo chmod 600 .env apps/api/.env
+```
 
-- `.env` en la raíz lo lee Docker Compose para crear PostgreSQL.
-- `apps/api/.env` lo lee la API para conectarse a PostgreSQL y acceder a sus proveedores.
-
-Genera una contraseña aleatoria para PostgreSQL; valores hexadecimales evitan caracteres que requieren codificación en `DATABASE_URL`:
+Genera una contraseña de PostgreSQL hexadecimal para que se pueda usar directamente en la URL de conexión y un secreto de sesión distinto:
 
 ```sh
 openssl rand -hex 32
+openssl rand -base64 48
 ```
 
-En el `.env` de la raíz configura (usa la misma contraseña en `DATABASE_URL`). Créalo con permisos privados, por ejemplo `sudo install -m 600 /dev/null /opt/tacticalboard/.env`, y edítalo con `sudoedit`:
+Edita `.env` y cambia `POSTGRES_PASSWORD` por el primer valor generado. Los valores de ejemplo son exclusivamente para desarrollo local; no los uses en un servidor.
 
-```dotenv
-POSTGRES_DB=tacticalboard
-POSTGRES_USER=tacticalboard
-POSTGRES_PASSWORD=CONTRASENA_ALEATORIA
-```
-
-Crea `apps/api/.env` como el usuario `tacticalboard` a partir de `apps/api/.env.example`, conservando la clave de API-Football y sustituyendo los valores locales por los de producción. Por ejemplo:
-
-```sh
-sudo -u tacticalboard cp /opt/tacticalboard/apps/api/.env.example /opt/tacticalboard/apps/api/.env
-sudo chmod 600 /opt/tacticalboard/apps/api/.env
-```
-
-Edita después el archivo con el usuario de servicio:
+Edita `apps/api/.env` y configura como mínimo:
 
 ```dotenv
 NODE_ENV=production
-DATABASE_URL=postgresql://tacticalboard:CONTRASENA_ALEATORIA@127.0.0.1:5434/tacticalboard
-SESSION_COOKIE_SECRET=SECRETO_ALEATORIO_DISTINTO
+SESSION_COOKIE_SECRET=SECRETO_ALEATORIO_DISTINTO_DE_32_CARACTERES_O_MAS
 APP_ORIGIN=https://TU_DOMINIO
 APIFOOTBALL_API_KEY=CLAVE_DEL_PROVEEDOR
 GOOGLE_CLIENT_ID=CLIENT_ID_WEB
@@ -96,19 +70,9 @@ GOOGLE_CLIENT_SECRET=CLIENT_SECRET_WEB
 GOOGLE_REDIRECT_URI=https://TU_DOMINIO/api/auth/google/callback
 ```
 
-En el ejemplo, `CONTRASENA_ALEATORIA` debe ser la contraseña de PostgreSQL que acabas de crear; genera `SESSION_COOKIE_SECRET` por separado. No pongas comillas alrededor de los valores simples de `.env`.
+`DATABASE_URL` del ejemplo de API es para desarrollo local; Compose la reemplaza al iniciar la API. El nombre de usuario, base de datos y contraseña del URL interno se construyen desde los valores del `.env` raíz. Mantén `POSTGRES_PASSWORD` hexadecimal para evitar caracteres que requieran codificación URL.
 
-`SESSION_COOKIE_SECRET` debe tener al menos 32 caracteres y mantenerse estable entre reinicios. Protege ambos archivos (`chmod 600`) y no los subas al repositorio. No uses `tacticalboard-local-only` ni otros valores de desarrollo en el servidor.
-
-Levanta PostgreSQL desde la raíz del repositorio (el usuario que ejecute Docker Compose debe poder acceder al daemon) y aplica las migraciones como el usuario de la aplicación:
-
-```sh
-cd /opt/tacticalboard
-sudo docker compose up -d postgres
-sudo -u tacticalboard -H sh -lc 'cd /opt/tacticalboard && pnpm db:migrate'
-```
-
-El volumen `tacticalboard-postgres-data` conserva los datos al reiniciar el contenedor. El mapeo actual solo escucha en `127.0.0.1:5434`; mantenlo inaccesible desde Internet.
+Protege ambos archivos, conserva `SESSION_COOKIE_SECRET` estable entre reinicios y no los subas al repositorio. `.env` y `apps/api/.env` están excluidos de Git y del contexto de construcción Docker.
 
 ## 4. Configurar Google OAuth
 
@@ -118,65 +82,31 @@ En Google Cloud Console, en el cliente OAuth de tipo **Web**, registra la URI ex
 https://TU_DOMINIO/api/auth/google/callback
 ```
 
-`APP_ORIGIN` debe ser exactamente `https://TU_DOMINIO`. La aplicación usa un flujo de autorización gestionado por el servidor, así que el origen JavaScript no se necesita para el flujo actual. Si también lo registras, debe ser solo el origen, sin ruta: `https://TU_DOMINIO`.
+`APP_ORIGIN` debe ser exactamente `https://TU_DOMINIO`. Si también registras un origen JavaScript, debe ser solo el origen, sin ruta. Si la pantalla de consentimiento está en modo de prueba, agrega las cuentas autorizadas como usuarios de prueba. El cliente secreto solo debe estar en `apps/api/.env` o en el almacén de secretos del servidor.
 
-Si la pantalla de consentimiento está en modo de prueba, agrega las cuentas de Google autorizadas como usuarios de prueba. El cliente secreto debe permanecer solo en `apps/api/.env` o en el almacén de secretos del servidor.
+## 5. Construir e iniciar los servicios
 
-## 5. Construir y ejecutar el API
-
-Construye todos los paquetes:
+Desde la raíz del repositorio, construye las imágenes y espera a que PostgreSQL esté listo:
 
 ```sh
-pnpm build
+cd /opt/tacticalboard
+sudo docker compose build
+sudo docker compose up -d postgres
 ```
 
-El servidor debe arrancar con `apps/api` como directorio de trabajo porque `dotenv/config` lee allí `apps/api/.env`. Por ejemplo:
+Ejecuta las migraciones explícitamente usando la imagen del API y luego inicia la aplicación:
 
 ```sh
-cd /opt/tacticalboard/apps/api
-pnpm exec tsx src/server.ts
+sudo docker compose run --rm api pnpm exec tsx src/db/migrate.ts
+sudo docker compose up -d api web
+sudo docker compose ps
 ```
 
-Para producción, mantenlo bajo `systemd` con un usuario sin privilegios. Un servicio mínimo puede usar:
+En producción la API no aplica migraciones al arrancar. La base de datos queda persistida en el volumen `tacticalboard-postgres-data`; PostgreSQL solo se publica en loopback del host, en el puerto `5434`.
 
-```ini
-[Unit]
-Description=TacticalBoard API
-After=network-online.target docker.service
-Wants=network-online.target
+## 6. Configurar Caddy en el host
 
-[Service]
-Type=simple
-User=tacticalboard
-WorkingDirectory=/opt/tacticalboard/apps/api
-Environment=NODE_ENV=production
-Environment=HOST=127.0.0.1
-Environment=PORT=3001
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
-ExecStart=/RUTA/ABSOLUTA/A/pnpm exec tsx src/server.ts
-Restart=on-failure
-RestartSec=5
-NoNewPrivileges=true
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Obtén las rutas con `sudo -u tacticalboard -H sh -lc 'command -v node; command -v pnpm'`. Usa rutas absolutas y asegúrate de que `PATH` incluya Node.js. Guarda la unidad como `/etc/systemd/system/tacticalboard-api.service`, luego actívala y revisa su estado y registros:
-
-```sh
-sudo systemctl daemon-reload
-sudo systemctl enable --now tacticalboard-api
-sudo systemctl status tacticalboard-api
-sudo journalctl -u tacticalboard-api -n 100 --no-pager
-```
-
-En producción `server.ts` **no ejecuta migraciones al arrancar**, así que vuelve a correr `pnpm db:migrate` como paso explícito de cada actualización que incluya una migración. El API escucha en loopback (`127.0.0.1`) para que Caddy sea el único servicio web que lo alcance desde el host.
-
-## 6. Servir la web y publicar el API con Caddy
-
-La configuración `server.proxy` de Vite solo existe durante el desarrollo. Añade este bloque al `Caddyfile` existente (normalmente `/etc/caddy/Caddyfile`); no reemplaces los bloques de otros sitios. Caddy sirve `apps/web/dist`, resuelve las rutas de React hacia `index.html`, y reenvía `/api/` a Fastify sin quitar ese prefijo:
+Añade este bloque al `Caddyfile` existente (normalmente `/etc/caddy/Caddyfile`); no reemplaces la configuración de otros sitios. La web del contenedor escucha en `127.0.0.1:8080` y el API en `127.0.0.1:3001`:
 
 ```caddyfile
 TU_DOMINIO {
@@ -187,14 +117,12 @@ TU_DOMINIO {
     }
 
     handle {
-        root * /opt/tacticalboard/apps/web/dist
-        try_files {path} /index.html
-        file_server
+        reverse_proxy 127.0.0.1:8080
     }
 }
 ```
 
-Edita el archivo existente con `sudoedit /etc/caddy/Caddyfile`, añade el bloque y valida/recarga Caddy:
+Valida y recarga Caddy:
 
 ```sh
 sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -202,21 +130,35 @@ sudo systemctl reload caddy
 sudo systemctl status caddy
 ```
 
-Caddy obtiene y renueva HTTPS automáticamente cuando el dominio resuelve a este servidor y los puertos 80/443 están accesibles. En `NODE_ENV=production` las cookies de sesión llevan `Secure`, por lo que el sitio debe servirse por HTTPS.
+Caddy obtiene y renueva HTTPS automáticamente cuando el dominio resuelve a este servidor y los puertos 80/443 son accesibles. En producción las cookies de sesión usan `Secure`, por lo que el sitio debe servirse por HTTPS.
 
-Comprueba estos dos endpoints desde el servidor:
+Verifica el estado local y el acceso público:
 
 ```sh
+sudo docker compose ps
 curl -fsS http://127.0.0.1:3001/api/health
 curl -fsS https://TU_DOMINIO/api/health
 ```
 
-## 7. Actualizaciones, copias de seguridad y datos externos
+## 7. Actualizaciones y copias de seguridad
 
-Para publicar una actualización: descarga el cambio, ejecuta `pnpm install --frozen-lockfile`, `pnpm build`, aplica `pnpm db:migrate` si corresponde, reinicia el servicio del API y recarga Caddy. Mantén copias de seguridad de PostgreSQL fuera del servidor y prueba la restauración antes de depender de ellas.
+Para publicar una actualización, actualiza el checkout, reconstruye las imágenes, ejecuta las migraciones y recrea los servicios:
 
-La búsqueda de un equipo puede consumir una llamada; al abrir un plantel, el API puede hacer hasta cuatro llamadas no cacheadas (plantel, dos fixtures y hasta dos alineaciones). API-Football Free tiene una cuota diaria limitada y el sistema reserva cinco llamadas. La disponibilidad de las alineaciones también depende de la competición y el plan. Las fotos y escudos siguen omitidos, y los derechos para retener/publicar datos de terceros en un servicio alojado deben revisarse antes de abrir el servidor al público.
+```sh
+cd /opt/tacticalboard
+sudo -u tacticalboard git pull --ff-only
+sudo docker compose build
+sudo docker compose run --rm api pnpm exec tsx src/db/migrate.ts
+sudo docker compose up -d
+sudo docker compose ps
+```
 
-## Estado de preparación
+Haz copias de seguridad de PostgreSQL fuera del servidor y prueba su restauración. Un volcado manual puede generarse así:
 
-El repositorio permite construir la web y el API, pero aún no incluye Dockerfiles de producción, un `Caddyfile` versionado ni un servicio `systemd` instalado. Este procedimiento es manual y se debe adaptar al dominio, usuario, rutas y política de copias de seguridad de tu servidor. Caddy gestiona TLS automáticamente.
+```sh
+sudo docker compose exec -T postgres pg_dump -U tacticalboard -d tacticalboard > tacticalboard-$(date +%F).sql
+```
+
+Conserva el volumen `tacticalboard-postgres-data` al actualizar. No ejecutes `docker compose down -v` salvo que quieras borrar deliberadamente todos los datos persistidos.
+
+La búsqueda de un equipo puede consumir una llamada; al abrir un plantel, el API puede hacer hasta cuatro llamadas no cacheadas (plantel, dos fixtures y hasta dos alineaciones). API-Football Free tiene una cuota diaria limitada y el sistema reserva cinco llamadas. La disponibilidad de alineaciones depende de la competición y el plan. Las fotos y escudos siguen omitidos, y los derechos para retener/publicar datos de terceros en un servicio alojado deben revisarse antes de abrir el servidor al público.
