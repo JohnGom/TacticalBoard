@@ -57,7 +57,16 @@ export interface FootballTeamSummary {
 export interface TeamSquadResponse {
   team: FootballTeamSummary;
   players: FootballPlayerSummary[];
+  lastMatchLineup: LastMatchLineup | null;
   retrievedAt: string;
+}
+
+export interface LastMatchLineup {
+  fixtureId: string;
+  playedAt: string;
+  opponentName: string | null;
+  formation: string | null;
+  startingPlayerIds: string[];
 }
 
 export interface FootballTeamSearchResponse {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { CustomTeamDetails, FootballPlayerSummary, FootballTeamSummary, SavedCustomTeam } from "@tactical-board/contracts";
+import type { CustomTeamDetails, FootballPlayerSummary, FootballTeamSummary, LastMatchLineup, SavedCustomTeam } from "@tactical-board/contracts";
 import {
   createLineupFromRoster,
   FORMATIONS,
@@ -10,7 +10,7 @@ import {
 import type { BoardDraft } from "./board-draft";
 import { getFootballTeamSquad, searchFootballTeams } from "./football-data-client";
 import { createCustomTeam, getCustomTeam, listCustomTeams } from "../data/workspace-client";
-import { playerPositionLabel, teamKindLabel } from "../ui/labels";
+import { footballCountryLabel, footballTeamNameLabel, playerPositionLabel, teamKindLabel } from "../ui/labels";
 
 const formations = Object.keys(FORMATIONS) as FormationName[];
 const positions = ["Portero", "Defensa", "Centrocampista", "Delantero", "Otra"];
@@ -75,6 +75,10 @@ function toRosterPlayer(player: FootballPlayerSummary): RosterPlayer {
   };
 }
 
+function supportedFormation(value: string | null | undefined): FormationName | null {
+  return formations.find((formation) => formation === value) ?? null;
+}
+
 export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSetupProps) {
   const [step, setStep] = useState<"choose" | "real" | "custom" | "saved">(initialSavedTeamId ? "saved" : "choose");
   const [formation, setFormation] = useState<FormationName>("4-3-3");
@@ -82,6 +86,7 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
   const [teamResults, setTeamResults] = useState<FootballTeamSummary[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<FootballTeamSummary | null>(null);
   const [loadedSquad, setLoadedSquad] = useState<FootballPlayerSummary[] | null>(null);
+  const [lastMatchLineup, setLastMatchLineup] = useState<LastMatchLineup | null>(null);
   const [savedTeams, setSavedTeams] = useState<SavedCustomTeam[]>([]);
   const [savedTeamsLoaded, setSavedTeamsLoaded] = useState(false);
   const [selectedSavedTeam, setSelectedSavedTeam] = useState<SavedCustomTeam | null>(null);
@@ -151,6 +156,8 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
     setError(null);
     setSelectedTeam(null);
     setLoadedSquad(null);
+    setLastMatchLineup(null);
+    setFormation("4-3-3");
     try {
       const results = await searchFootballTeams(query);
       setTeamResults(results);
@@ -166,11 +173,18 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
   async function handleSelectTeam(team: FootballTeamSummary) {
     setSelectedTeam(team);
     setLoadedSquad(null);
+    setLastMatchLineup(null);
+    setFormation("4-3-3");
     setBusy("squad");
     setError(null);
     try {
       const squad = await getFootballTeamSquad(team.externalReference.providerId);
       setLoadedSquad(squad.players);
+      const recentStarterIds = new Set(squad.lastMatchLineup?.startingPlayerIds ?? []);
+      const hasCompleteRecentStartingXI = squad.players.filter((player) => recentStarterIds.has(player.id)).length === 11;
+      const usableLastMatchLineup = hasCompleteRecentStartingXI ? squad.lastMatchLineup : null;
+      setLastMatchLineup(usableLastMatchLineup);
+      setFormation(supportedFormation(usableLastMatchLineup?.formation) ?? "4-3-3");
       if (squad.players.length < 11) {
         setError("El proveedor no devolvió 11 jugadores para este equipo. Prueba otro resultado.");
       }
@@ -203,13 +217,20 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
   function handleStartRealTeam() {
     if (!selectedTeam || !loadedSquad || loadedSquad.length < 11) return;
     const roster = loadedSquad.map(toRosterPlayer);
-    const lineup = createLineupFromRoster(formation, roster);
+    const recentStarterIds = new Set(lastMatchLineup?.startingPlayerIds ?? []);
+    const lineupOrder = new Map<string, number>();
+    lastMatchLineup?.startingPlayerIds.forEach((playerId, index) => lineupOrder.set(playerId, index));
+    const recentStarters = roster
+      .filter((player) => recentStarterIds.has(player.id))
+      .sort((left, right) => (lineupOrder.get(left.id) ?? 0) - (lineupOrder.get(right.id) ?? 0));
+    const hasRecentStartingXI = recentStarters.length === 11;
+    const lineup = createLineupFromRoster(formation, hasRecentStartingXI ? recentStarters : roster);
     if (lineup.players.length < 11) {
       setError("No hay suficientes jugadores para completar los 11 titulares.");
       return;
     }
     void onStartBoard({
-      teamName: selectedTeam.name,
+      teamName: footballTeamNameLabel(selectedTeam),
       teamKind: selectedTeam.kind,
       teamColor: "#a9cbb4",
       teamId: null,
@@ -217,6 +238,9 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
       formation,
       pitchView: "full",
       ...lineup,
+      bench: hasRecentStartingXI
+        ? [...lineup.bench, ...roster.filter((player) => !recentStarterIds.has(player.id))]
+        : lineup.bench,
     });
   }
 
@@ -370,7 +394,7 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
                   maxLength={80}
                   minLength={3}
                   onChange={(event) => setTeamQuery(event.target.value)}
-                  placeholder="Real Madrid, Spain, Flamengo…"
+                  placeholder="Real Madrid, España, Flamengo…"
                   value={teamQuery}
                 />
                 <button className="setup-primary-button" type="submit" disabled={busy !== null}>
@@ -391,8 +415,8 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
                   type="button"
                 >
                   <span>
-                    <strong>{team.name}</strong>
-                    <small>{team.country ?? "País no disponible"} · {teamKindLabel(team.kind)}</small>
+                    <strong>{footballTeamNameLabel(team)}</strong>
+                    <small>{footballCountryLabel(team.country)} · {teamKindLabel(team.kind)}</small>
                   </span>
                   <span aria-hidden="true">{selectedTeam?.id === team.id ? "✓" : "›"}</span>
                 </button>
@@ -400,14 +424,14 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
             </div>
           )}
 
-          {busy === "squad" && <p className="provider-message" role="status">Cargando plantel de {selectedTeam?.name}…</p>}
+          {busy === "squad" && <p className="provider-message" role="status">Cargando plantel de {selectedTeam ? footballTeamNameLabel(selectedTeam) : "tu equipo"}…</p>}
           {error && <p className="setup-error" role="alert">{error}</p>}
 
           {selectedTeam && loadedSquad && (
             <section className="setup-squad-preview" aria-labelledby="squad-preview-title">
               <div className="setup-squad-preview__heading">
                 <div>
-                  <h2 id="squad-preview-title">{selectedTeam.name}</h2>
+                  <h2 id="squad-preview-title">{footballTeamNameLabel(selectedTeam)}</h2>
                   <p>{loadedSquad.length} jugadores disponibles · {teamKindLabel(selectedTeam.kind)}</p>
                 </div>
                 <span className="count-pill">{loadedSquad.length}</span>
@@ -424,7 +448,11 @@ export function BoardSetup({ initialSavedTeamId = null, onStartBoard }: BoardSet
                 ))}
               </div>
               <FormationSelect value={formation} onChange={setFormation} />
-              <p className="provider-message">Los 11 titulares se asignan por posición; el resto queda en el banco para hacer cambios en la cancha.</p>
+              <p className="provider-message">
+                {lastMatchLineup
+                  ? `Tomamos como referencia el último partido${lastMatchLineup.opponentName ? ` contra ${footballCountryLabel(lastMatchLineup.opponentName)}` : ""} (${new Date(lastMatchLineup.playedAt).toLocaleDateString("es")}). Puedes cambiar la formación antes de entrar.`
+                  : "No hay una alineación reciente disponible; proponemos el once por posición y el resto queda en el banco."}
+              </p>
               <button className="setup-primary-button setup-primary-button--wide" type="button" onClick={handleStartRealTeam} disabled={loadedSquad.length < 11}>
                 Entrar a la cancha <span aria-hidden="true">→</span>
               </button>

@@ -20,6 +20,7 @@ const team: FootballTeamSummary = {
 const squad: TeamSquadResponse = {
   team,
   players: [],
+  lastMatchLineup: null,
   retrievedAt: "2026-10-13T00:00:00.000Z",
 };
 

@@ -42,6 +42,124 @@ test("team search normalizes clubs and national teams without returning copyrigh
   assert.equal(teams[0]?.externalReference.providerId, "541");
 });
 
+test("translates a Spanish national-team search name for API-Football", async () => {
+  let requestedName: string | null = null;
+  const fetcher: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    requestedName = url.searchParams.get("search");
+    return jsonResponse({
+      errors: [],
+      response: [{ team: { id: 9, name: "Spain", country: "Spain", national: true } }],
+    });
+  };
+  const provider = new ApiFootballProvider("test-key", fetcher);
+
+  const teams = await provider.searchTeams("Selección de España");
+
+  assert.equal(requestedName, "Spain");
+  assert.equal(teams[0]?.externalReference.providerId, "9");
+});
+
+test("uses the latest recent fixture lineup that API-Football provides", async () => {
+  const playerIds = Array.from({ length: 11 }, (_, index) => index + 1);
+  const requestedLineups: string[] = [];
+  const fetcher: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/teams") {
+      assert.equal(url.searchParams.get("search"), "Spain");
+      return jsonResponse({ errors: [], response: [{ team: { id: 9, name: "Spain", country: "Spain", national: true } }] });
+    }
+    if (url.pathname === "/players/squads") {
+      return jsonResponse({
+        errors: [],
+        response: [{
+          team: { id: 9, name: "Spain" },
+          players: playerIds.map((id, index) => ({
+            id,
+            name: `Player ${id}`,
+            number: id,
+            position: index === 0 ? "Goalkeeper" : index < 5 ? "Defender" : index < 8 ? "Midfielder" : "Forward",
+          })),
+        }],
+      });
+    }
+    if (url.pathname === "/fixtures") {
+      assert.equal(url.searchParams.get("last"), "2");
+      assert.equal(url.searchParams.get("status"), "FT-AET-PEN");
+      return jsonResponse({
+        errors: [],
+        response: [
+          { fixture: { id: 700, date: "2026-10-25T18:00:00+00:00" }, teams: { home: { id: 9, name: "Spain" }, away: { id: 44, name: "France" } } },
+          { fixture: { id: 699, date: "2026-10-20T18:00:00+00:00" }, teams: { home: { id: 9, name: "Spain" }, away: { id: 43, name: "Portugal" } } },
+        ],
+      });
+    }
+    if (url.pathname === "/fixtures/lineups") {
+      const fixtureId = url.searchParams.get("fixture");
+      if (fixtureId) requestedLineups.push(fixtureId);
+      if (fixtureId === "700") return jsonResponse({ errors: [], response: [] });
+      return jsonResponse({
+        errors: [],
+        response: [{
+          team: { id: 9, name: "Spain" },
+          formation: "4-4-2",
+          startXI: playerIds.map((id) => ({ player: { id, name: `Player ${id}` } })),
+        }],
+      });
+    }
+    throw new Error(`Unexpected endpoint: ${url.pathname}`);
+  };
+  const provider = new ApiFootballProvider("test-key", fetcher);
+
+  const [team] = await provider.searchTeams("España");
+  assert.ok(team);
+  const squad = await provider.getTeamSquad(team.externalReference.providerId);
+
+  assert.deepEqual(requestedLineups, ["700", "699"]);
+  assert.deepEqual(squad.lastMatchLineup, {
+    fixtureId: "699",
+    playedAt: "2026-10-20T18:00:00+00:00",
+    opponentName: "Portugal",
+    formation: "4-4-2",
+    startingPlayerIds: playerIds.map((id) => `api-football:${id}`),
+  });
+});
+
+test("checks no more than two recent fixture lineups and falls back when neither is available", async () => {
+  const requestedLineups: string[] = [];
+  const fixtures = Array.from({ length: 5 }, (_, index) => ({
+    fixture: { id: 800 - index, date: new Date(Date.UTC(2026, 9, 25 - index)).toISOString() },
+    teams: { home: { id: 9, name: "Spain" }, away: { id: 40 + index, name: `Opponent ${index + 1}` } },
+  }));
+  const fetcher: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/teams") {
+      return jsonResponse({ errors: [], response: [{ team: { id: 9, name: "Spain", country: "Spain", national: true } }] });
+    }
+    if (url.pathname === "/players/squads") {
+      return jsonResponse({ errors: [], response: [{ team: { id: 9, name: "Spain" }, players: [] }] });
+    }
+    if (url.pathname === "/fixtures") {
+      assert.equal(url.searchParams.get("last"), "2");
+      return jsonResponse({ errors: [], response: fixtures });
+    }
+    if (url.pathname === "/fixtures/lineups") {
+      const fixtureId = url.searchParams.get("fixture");
+      if (fixtureId) requestedLineups.push(fixtureId);
+      return jsonResponse({ errors: [], response: [] });
+    }
+    throw new Error(`Unexpected provider request: ${url.pathname}`);
+  };
+  const provider = new ApiFootballProvider("test-key", fetcher);
+  const [team] = await provider.searchTeams("España");
+  assert.ok(team);
+
+  const squad = await provider.getTeamSquad(team.externalReference.providerId);
+
+  assert.deepEqual(requestedLineups, ["800", "799"]);
+  assert.equal(squad.lastMatchLineup, null);
+});
+
 test("squad normalization deduplicates player IDs and keeps available shirt/position data", async () => {
   const provider = new ApiFootballProvider("test-key", fakeFetcher([
     jsonResponse({
@@ -76,6 +194,7 @@ test("squad normalization deduplicates player IDs and keeps available shirt/posi
   assert.equal(squad.players[2]?.shirtNumber, 1);
   assert.equal(squad.players[2]?.position, "Goalkeeper");
   assert.equal(squad.team.name, "Real Madrid");
+  assert.equal(squad.lastMatchLineup, null);
 });
 
 test("provider key absence, rate limit, and free-plan restrictions return safe typed errors", async () => {

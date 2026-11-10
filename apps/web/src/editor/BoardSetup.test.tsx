@@ -51,13 +51,27 @@ describe("pre-pitch team setup", () => {
 
   test("requires a source choice, then loads a real selection before entering the pitch", async () => {
     const onStartBoard = vi.fn();
+    const lastMatchStarters = realSquadPlayers
+      .filter((player) => player.id !== "player-2")
+      .map((player) => player.id);
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       const body = url.includes("/api/teams")
         ? { teams: [] }
         : url.includes("/api/football/teams?")
           ? { teams: [realTeam] }
-          : { team: realTeam, players: realSquadPlayers, retrievedAt: "2026-10-14T00:00:00.000Z" };
+          : {
+              team: realTeam,
+              players: realSquadPlayers,
+              lastMatchLineup: {
+                fixtureId: "fixture-1",
+                playedAt: "2026-10-14T00:00:00.000Z",
+                opponentName: "France",
+                formation: "4-4-2",
+                startingPlayerIds: lastMatchStarters,
+              },
+              retrievedAt: "2026-10-14T00:00:00.000Z",
+            };
       return { ok: true, json: async () => body } as Response;
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -66,21 +80,25 @@ describe("pre-pitch team setup", () => {
     expect(screen.queryByLabelText("Tactical board editor")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /usar un equipo real/i }));
-    fireEvent.change(screen.getByLabelText("Nombre del club o país"), { target: { value: "Spain" } });
+    fireEvent.change(screen.getByLabelText("Nombre del club o país"), { target: { value: "España" } });
     fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
-    const result = await screen.findByRole("button", { name: /Spain.*Selección/ });
+    const result = await screen.findByRole("button", { name: /España.*Selección/ });
     fireEvent.click(result);
 
-    expect(await screen.findByRole("heading", { name: "Spain" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "España" })).toBeTruthy();
     expect(screen.getByText(/12 jugadores disponibles/)).toBeTruthy();
+    expect(screen.getByLabelText("Formación inicial")).toHaveProperty("value", "4-4-2");
+    expect(screen.getByText(/último partido contra Francia/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /entrar a la cancha/i }));
 
     await waitFor(() => expect(onStartBoard).toHaveBeenCalledTimes(1));
     const draft = onStartBoard.mock.calls[0]?.[0] as BoardDraft;
     expect(draft.teamKind).toBe("national");
+    expect(draft.teamName).toBe("España");
     expect(draft.players).toHaveLength(11);
     expect(draft.bench).toHaveLength(1);
-    expect(draft.players[0]?.snapshot.name).toBe("Keeper");
+    expect(draft.players.some((player) => player.snapshot.name === "Forward 4")).toBe(true);
+    expect(draft.bench[0]?.snapshot.name).toBe("Defender 1");
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 

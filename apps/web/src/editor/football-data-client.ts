@@ -2,6 +2,7 @@ import type {
   FootballDataErrorResponse,
   FootballTeamSearchResponse,
   FootballTeamSummary,
+  LastMatchLineup,
   TeamSquadResponse,
 } from "@tactical-board/contracts";
 
@@ -31,6 +32,16 @@ function isSearchResponse(value: unknown): value is FootballTeamSearchResponse {
   return isRecord(value) && Array.isArray(value.teams) && value.teams.every(isTeamSummary);
 }
 
+function isLastMatchLineup(value: unknown): value is LastMatchLineup | null {
+  return value === null || (isRecord(value) &&
+    typeof value.fixtureId === "string" &&
+    typeof value.playedAt === "string" &&
+    (typeof value.opponentName === "string" || value.opponentName === null) &&
+    (typeof value.formation === "string" || value.formation === null) &&
+    Array.isArray(value.startingPlayerIds) &&
+    value.startingPlayerIds.every((playerId) => typeof playerId === "string"));
+}
+
 function isFootballDataErrorResponse(value: unknown): value is FootballDataErrorResponse {
   if (!isRecord(value) || typeof value.error !== "string" || typeof value.message !== "string") {
     return false;
@@ -49,7 +60,7 @@ function isFootballDataErrorResponse(value: unknown): value is FootballDataError
 
 function isSquadResponse(value: unknown): value is TeamSquadResponse {
   if (!isRecord(value) || !isTeamSummary(value.team) || !Array.isArray(value.players)) return false;
-  return typeof value.retrievedAt === "string" && value.players.every((player) => {
+  return typeof value.retrievedAt === "string" && isLastMatchLineup(value.lastMatchLineup) && value.players.every((player) => {
     if (!isRecord(player) || !isRecord(player.externalReference)) return false;
     return typeof player.id === "string" &&
       typeof player.name === "string" &&

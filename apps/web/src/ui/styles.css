@@ -50,12 +50,13 @@ button { color: inherit; }
   font-weight: 800;
   letter-spacing: -0.55px;
   text-decoration: none;
+  margin-left: 16px;
 }
 
 .brand-mark {
   display: block;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
 }
 
@@ -646,7 +647,7 @@ a:focus-visible {
 @media (max-width: 460px) {
   .app-shell { width: calc(100% - 22px); }
   .brand { gap: 8px; font-size: 14px; }
-  .brand-mark { width: 26px; height: 26px; }
+  .brand-mark { width: 30px; height: 30px; }
   .status { max-width: 133px; font-size: 9px; }
   .editor-heading { align-items: center; }
   .editor-heading__actions { flex-direction: column; align-items: stretch; }
@@ -1453,7 +1454,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .landing-team-preview { grid-column: 1 / -1; display: grid; gap: 14px; padding: 0; }
 .landing-team-preview__title { margin: 0; color: #24372a; font-size: 15px; font-weight: 600; }
 .landing-team-preview__roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.landing-team-preview__roles span { min-height: 160px; display: flex; align-items: flex-end; padding: 14px; border: 1px solid #d8e2d7; border-radius: 9px; background: #fff; color: #24372a; font-size: 15px; }
+.landing-position-card { min-height: 168px; display: flex; align-items: center; flex-direction: column; justify-content: flex-end; gap: 9px; padding: 12px; border: 1px solid #d8e2d7; border-radius: 9px; background: #fff; color: #24372a; text-align: center; }
+.landing-position-silhouette { display: block; width: min(100%, 120px); height: 112px; color: #14231b; }
+.landing-position-card > span { color: #24372a; font-size: 14px; font-weight: 600; line-height: 1.3; }
 .landing-closing { height: 100svh; min-height: 100svh; background: var(--paper); }
 .landing-closing > .wrap { height: 100svh; min-height: 100svh; display: grid; grid-template-rows: minmax(0, 1fr) auto; padding-bottom: 72px; }
 .landing-final-cta { min-height: 0; display: flex; align-items: flex-start; flex-direction: column; justify-content: center; gap: 26px; padding: 64px 0; }
@@ -1480,6 +1483,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .landing-hero__layout { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .landing-intro > .wrap, .landing-teams > .wrap { padding-block: 44px; }
   .landing-team-preview { grid-column: 1; }
+  .landing-position-silhouette { height: 96px; }
   .landing-steps { grid-template-columns: minmax(0, 1fr); }
   .landing-step:nth-of-type(3) { grid-column: 1; }
   .landing-demo-board__pitch { height: 132px; }

@@ -1,12 +1,72 @@
 import type {
   FootballPlayerSummary,
   FootballTeamSummary,
+  LastMatchLineup,
   TeamSquadResponse,
 } from "@tactical-board/contracts";
 import type { FootballDataProvider } from "@tactical-board/domain";
 
 const API_BASE_URL = "https://v3.football.api-sports.io";
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const RECENT_FIXTURES_TO_CHECK = 2;
+
+const spanishTeamSearchAliases: Readonly<Record<string, string>> = {
+  espana: "Spain",
+  alemania: "Germany",
+  francia: "France",
+  italia: "Italy",
+  inglaterra: "England",
+  "paises bajos": "Netherlands",
+  holanda: "Netherlands",
+  brasil: "Brazil",
+  "estados unidos": "USA",
+  eeuu: "USA",
+  mexico: "Mexico",
+  japon: "Japan",
+  "corea del sur": "South Korea",
+  "corea del norte": "North Korea",
+  marruecos: "Morocco",
+  belgica: "Belgium",
+  croacia: "Croatia",
+  suiza: "Switzerland",
+  suecia: "Sweden",
+  noruega: "Norway",
+  dinamarca: "Denmark",
+  gales: "Wales",
+  escocia: "Scotland",
+  irlanda: "Republic of Ireland",
+  "costa rica": "Costa Rica",
+  canada: "Canada",
+  australia: "Australia",
+  nigeria: "Nigeria",
+  senegal: "Senegal",
+  camerun: "Cameroon",
+  ghana: "Ghana",
+  "costa de marfil": "Ivory Coast",
+  peru: "Peru",
+  bolivia: "Bolivia",
+  paraguay: "Paraguay",
+  uruguay: "Uruguay",
+  ecuador: "Ecuador",
+  colombia: "Colombia",
+  venezuela: "Venezuela",
+  panama: "Panama",
+  jamaica: "Jamaica",
+  "arabia saudita": "Saudi Arabia",
+  turquia: "Turkey",
+  polonia: "Poland",
+  serbia: "Serbia",
+  ucrania: "Ukraine",
+  rumania: "Romania",
+  chequia: "Czech Republic",
+  hungria: "Hungary",
+  egipto: "Egypt",
+  tunez: "Tunisia",
+  argelia: "Algeria",
+  iran: "Iran",
+  qatar: "Qatar",
+  "nueva zelanda": "New Zealand",
+};
 
 type ApiFootballErrorCode =
   | "provider_not_configured"
@@ -47,6 +107,63 @@ function asId(value: unknown): string | null {
   }
   if (typeof value === "string" && /^\d{1,16}$/.test(value)) return value;
   return null;
+}
+
+function normalizeSearchText(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("es").replace(/\s+/g, " ");
+}
+
+function apiTeamSearchText(value: string): string {
+  const normalized = normalizeSearchText(value);
+  const countryName = normalized.replace(/^(?:la\s+)?seleccion(?:\s+nacional)?(?:\s+de)?\s+/, "");
+  return spanishTeamSearchAliases[normalized] ?? spanishTeamSearchAliases[countryName] ?? value;
+}
+
+interface RecentFixture {
+  id: string;
+  playedAt: string;
+  opponentName: string | null;
+}
+
+function toRecentFixture(value: unknown, teamId: string): RecentFixture | null {
+  if (!isRecord(value) || !isRecord(value.fixture) || !isRecord(value.teams)) return null;
+  const id = asId(value.fixture.id);
+  const playedAt = asString(value.fixture.date);
+  if (!id || !playedAt) return null;
+
+  const home = isRecord(value.teams.home) ? value.teams.home : null;
+  const away = isRecord(value.teams.away) ? value.teams.away : null;
+  if (!home || !away) return null;
+  const homeId = asId(home.id);
+  const awayId = asId(away.id);
+  if (homeId !== teamId && awayId !== teamId) return null;
+
+  return {
+    id,
+    playedAt,
+    opponentName: asString(homeId === teamId ? away.name : home.name),
+  };
+}
+
+function lineupForTeam(value: unknown, teamId: string, fixture: RecentFixture): LastMatchLineup | null {
+  if (!isRecord(value) || !isRecord(value.team) || asId(value.team.id) !== teamId || !Array.isArray(value.startXI)) {
+    return null;
+  }
+
+  const startingPlayerIds = value.startXI.flatMap((entry) => {
+    if (!isRecord(entry) || !isRecord(entry.player)) return [];
+    const playerId = asId(entry.player.id);
+    return playerId ? [`api-football:${playerId}`] : [];
+  });
+  if (startingPlayerIds.length === 0) return null;
+
+  return {
+    fixtureId: fixture.id,
+    playedAt: fixture.playedAt,
+    opponentName: fixture.opponentName,
+    formation: asString(value.formation),
+    startingPlayerIds,
+  };
 }
 
 function apiHasErrors(value: unknown): boolean {
@@ -144,11 +261,11 @@ export class ApiFootballProvider implements FootballDataProvider {
       );
     }
 
-    const cacheKey = normalizedQuery.toLocaleLowerCase();
+    const cacheKey = normalizeSearchText(normalizedQuery);
     const cached = this.searchCache.get(cacheKey);
     if (cached && cached.expiresAt > this.now()) return cached.value;
 
-    const body = await this.request("/teams", { search: normalizedQuery });
+    const body = await this.request("/teams", { search: apiTeamSearchText(normalizedQuery) });
     const records = Array.isArray(body.response) ? body.response : [];
     const uniqueTeams = new Map<string, FootballTeamSummary>();
 
@@ -176,7 +293,10 @@ export class ApiFootballProvider implements FootballDataProvider {
     const cached = this.squadCache.get(teamId);
     if (cached && cached.expiresAt > this.now()) return cached.value;
 
-    const body = await this.request("/players/squads", { team: teamId });
+    const [body, lastMatchLineup] = await Promise.all([
+      this.request("/players/squads", { team: teamId }),
+      this.findLastMatchLineup(teamId),
+    ]);
     const records = Array.isArray(body.response) ? body.response : [];
     const matchingRecord = records.find((record) => {
       if (!isRecord(record) || !isRecord(record.team)) return false;
@@ -218,10 +338,41 @@ export class ApiFootballProvider implements FootballDataProvider {
         shirtNumber: mostCommon(shirtNumbers),
         position: mostCommon(positions),
       })),
+      lastMatchLineup,
       retrievedAt: new Date(this.now()).toISOString(),
     };
     this.setCache(this.squadCache, teamId, result);
     return result;
+  }
+
+  private async findLastMatchLineup(teamId: string): Promise<LastMatchLineup | null> {
+    try {
+      const fixturesBody = await this.request("/fixtures", {
+        team: teamId,
+        last: String(RECENT_FIXTURES_TO_CHECK),
+        status: "FT-AET-PEN",
+      });
+      const fixtures = Array.isArray(fixturesBody.response)
+        ? fixturesBody.response.flatMap((record) => {
+          const fixture = toRecentFixture(record, teamId);
+          return fixture ? [fixture] : [];
+        })
+        : [];
+      fixtures.sort((left, right) => Date.parse(right.playedAt) - Date.parse(left.playedAt));
+
+      for (const fixture of fixtures.slice(0, RECENT_FIXTURES_TO_CHECK)) {
+        const lineupBody = await this.request("/fixtures/lineups", { fixture: fixture.id, team: teamId });
+        const records = Array.isArray(lineupBody.response) ? lineupBody.response : [];
+        const lineup = records.flatMap((record) => {
+          const parsed = lineupForTeam(record, teamId, fixture);
+          return parsed ? [parsed] : [];
+        })[0];
+        if (lineup) return lineup;
+      }
+    } catch {
+      // A lineup is a best-effort suggestion: missing coverage or quota must not block squad setup.
+    }
+    return null;
   }
 
   private getCachedTeam(teamId: string): FootballTeamSummary | null {

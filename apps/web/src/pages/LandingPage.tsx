@@ -3,6 +3,35 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { Brand } from "../ui/Brand";
 
+type PositionRole = "goalkeeper" | "defender" | "midfielder" | "forward";
+
+function PositionSilhouette({ role }: { role: PositionRole }) {
+  return (
+    <svg className={`landing-position-silhouette landing-position-silhouette--${role}`} viewBox="0 0 120 100" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8">
+        {role === "goalkeeper" && <>
+          <path d="M77 39c-12-5-23-4-35 1L24 30 12 27M48 41 29 54l-16 2M44 40 27 38l-9 6M43 42 29 63l-13 8" />
+          <circle cx="81" cy="31" r="8" fill="currentColor" stroke="none" />
+          <circle cx="9" cy="25" r="5" fill="#E8A453" stroke="none" />
+        </>}
+        {role === "defender" && <>
+          <path d="M60 30v30M58 37 39 47l-12-2M62 37l17 10 12-4M59 60 45 80M61 60l15 20" />
+          <circle cx="60" cy="20" r="8" fill="currentColor" stroke="none" />
+        </>}
+        {role === "midfielder" && <>
+          <path d="M47 29c9 4 16 11 19 21M53 36 36 30l-11 5M58 35l15-10 12 4M66 50 50 64 41 81M66 50l14 13 7 18" />
+          <circle cx="45" cy="19" r="8" fill="currentColor" stroke="none" />
+        </>}
+        {role === "forward" && <>
+          <path d="m54 29 8 20M58 35 42 46l-12 1M60 35l14-8 12 6M62 49 55 66l-3 16M62 49l18 4 19-15" />
+          <circle cx="52" cy="19" r="8" fill="currentColor" stroke="none" />
+          <circle cx="106" cy="31" r="5" fill="#E8A453" stroke="none" />
+        </>}
+      </g>
+    </svg>
+  );
+}
+
 export function LandingPage() {
   const { user } = useAuth();
 
@@ -158,7 +187,10 @@ export function LandingPage() {
             <div className="landing-team-preview" role="img" aria-label="Posiciones disponibles en una alineación">
               <p className="landing-team-preview__title">Posiciones de la alineación</p>
               <div className="landing-team-preview__roles">
-                <span>Portero</span><span>Defensas</span><span>Centrocampistas</span><span>Delanteros</span>
+                <div className="landing-position-card"><PositionSilhouette role="goalkeeper" /><span>Portero</span></div>
+                <div className="landing-position-card"><PositionSilhouette role="defender" /><span>Defensas</span></div>
+                <div className="landing-position-card"><PositionSilhouette role="midfielder" /><span>Centrocampistas</span></div>
+                <div className="landing-position-card"><PositionSilhouette role="forward" /><span>Delanteros</span></div>
               </div>
             </div>
           </div>

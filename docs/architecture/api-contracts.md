@@ -49,7 +49,7 @@ Board updates increment the revision atomically. A stale revision returns `409` 
 
 ## `GET /api/football/teams?query={text}`
 
-Searches API-Football teams by name. `query` is required, 3–80 characters. The provider may return multiple similarly named clubs or national teams; the client displays country and team kind for selection.
+Searches API-Football teams by name. `query` is required, 3–80 characters. The API normalizes accents and translates common Spanish national-team names (for example, `España` to `Spain`) before querying the provider; the web client displays known national-team and country names in Spanish. The provider may return multiple similarly named clubs or national teams; the client displays country and team kind for selection.
 
 Response:
 
@@ -75,7 +75,7 @@ Results are cached in process for five minutes. The in-memory team lookup is req
 
 ## `GET /api/football/teams/{providerTeamId}/squad`
 
-`providerTeamId` must be a numeric API-Football ID returned by a recent search. Calls the season-independent `/players/squads?team={id}` endpoint and returns unique players keyed by provider ID. Duplicate player records are collapsed; shirt number and position are selected from the most frequently observed non-null values. An empty player list means the provider did not return a usable squad.
+`providerTeamId` must be a numeric API-Football ID returned by a recent search. Calls the season-independent `/players/squads?team={id}` endpoint and returns unique players keyed by provider ID. Duplicate player records are collapsed; shirt number and position are selected from the most frequently observed non-null values. The API requests only the two latest finished fixtures and checks their lineups until it finds an available official starting XI. If found, its starting-player provider IDs and match context are returned as `lastMatchLineup`; this is used to prioritize the initial eleven. If no usable lineup is available, `lastMatchLineup` is `null` and the client falls back to assigning players by position. This enrichment is best-effort and never blocks squad loading. A first uncached squad lookup uses one squad request, one two-fixture request, and at most two lineup requests.
 
 Response:
 
@@ -99,9 +99,18 @@ Response:
       "externalReference": { "provider": "api-football", "providerId": "99" }
     }
   ],
+  "lastMatchLineup": {
+    "fixtureId": "123456",
+    "playedAt": "ISO-8601 timestamp",
+    "opponentName": "Opponent",
+    "formation": "4-3-3",
+    "startingPlayerIds": ["api-football:99"]
+  },
   "retrievedAt": "ISO-8601 timestamp"
 }
 ```
+
+`lastMatchLineup` is `null` when fixtures or lineups are unavailable for the team's competition or current provider plan. An available lineup reflects one specific match; it does not claim to identify a team's habitual starters.
 
 Team squads are cached in process for five minutes. API-Football's developer guides recommend local caching for performance and quota management; the adapter uses only a short-lived server cache and does not return image URLs. It also observes API-Football's daily remaining-call header and stops making requests when five calls remain; the guard resets at UTC midnight. Private/local player snapshots (name, shirt number, position, and provider ID) are enabled with user approval. Provider terms do not clearly grant public publication, image use, or long-term hosted retention; confirm those rights before deployment or public release.
 
