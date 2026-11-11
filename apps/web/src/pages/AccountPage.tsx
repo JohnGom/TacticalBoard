@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { Brand } from "../ui/Brand";
+import { LegalLinks } from "./LegalPages";
 
 type AccountMode = "login" | "register";
 
@@ -121,6 +122,8 @@ export function AccountPage({ mode }: AccountPageProps) {
             <Link to={isRegister ? "/login" : "/register"}>{isRegister ? "Inicia sesión" : "Crea una cuenta"}</Link>
           </p>
           <p className="account-privacy">Tus pizarras son privadas y solo tú puedes acceder a ellas.</p>
+          <p className="account-legal-intro">Consulta la información sobre el servicio y tus datos:</p>
+          <LegalLinks className="account-legal-links" />
         </section>
       </div>
     </main>

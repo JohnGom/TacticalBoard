@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { AccountPage } from "../pages/AccountPage";
 import { NewBoardPage, SavedBoardPage } from "../pages/BoardPages";
 import { LandingPage } from "../pages/LandingPage";
+import { PrivacyPage, TermsPage } from "../pages/LegalPages";
 import { CustomTeamPage, TeamsPage } from "../pages/TeamsPage";
 import { WorkspacePage } from "../pages/WorkspacePage";
 
@@ -19,6 +20,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/login" element={<AccountPage mode="login" />} />
       <Route path="/register" element={<AccountPage mode="register" />} />
       <Route element={<PrivateRoutes />}>

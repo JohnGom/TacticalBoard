@@ -912,6 +912,37 @@ a:focus-visible {
 .public-footer { display: flex; min-height: 75px; align-items: center; justify-content: space-between; gap: 18px; border-top: 1px solid #d8ddd3; }
 .public-footer > span { color: #7a857a; font-size: 9px; }
 .public-footer a:last-child { color: #5c6c5e; font-size: 10px; text-decoration: none; }
+.legal-links { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.legal-links a { color: #536257; font-size: 10px; text-decoration: none; }
+.legal-links a:hover { color: var(--field); text-decoration: underline; text-underline-offset: 3px; }
+.public-footer__legal { gap: 14px; }
+.account-legal-intro { margin: 16px 0 6px; color: #758075; font-size: 9px; text-align: center; }
+.account-legal-links { justify-content: center; gap: 15px; }
+.account-legal-links a { font-size: 9px; }
+
+.legal-page { min-height: 100vh; padding: 0 clamp(20px, 6vw, 88px); background: var(--paper); }
+.legal-topbar { display: flex; min-height: 78px; align-items: center; justify-content: space-between; border-bottom: 1px solid #d8ddd3; }
+.legal-topbar > a:last-child { color: #536257; font-size: 12px; text-decoration: none; }
+.legal-topbar > a:last-child:hover { color: var(--field); text-decoration: underline; text-underline-offset: 4px; }
+.legal-document { width: min(100%, 780px); margin: 0 auto; padding: clamp(48px, 8vw, 94px) 0 76px; }
+.legal-document__intro { margin-bottom: 38px; padding-bottom: 30px; border-bottom: 1px solid #d8ddd3; }
+.legal-document__intro .section-kicker { margin: 0 0 13px; color: #627562; }
+.legal-document__intro h1 { margin: 0; color: var(--ink); font-family: "Space Grotesk Variable", "Avenir Next", sans-serif; font-size: clamp(34px, 6vw, 56px); font-weight: 600; letter-spacing: -2.3px; line-height: 1.08; }
+.legal-document__updated { margin: 15px 0 0; color: #68766a; font-size: 12px; }
+.legal-sections section { padding: 25px 0; border-bottom: 1px solid #dfe3da; }
+.legal-sections h2 { margin: 0 0 12px; color: #203a2c; font-family: "Space Grotesk Variable", "Avenir Next", sans-serif; font-size: 19px; font-weight: 600; letter-spacing: -.45px; }
+.legal-sections p, .legal-sections li { color: #46564a; font-size: 14px; line-height: 1.78; }
+.legal-sections code { padding: 1px 4px; border-radius: 3px; background: #e8ece4; color: #263b2c; font-size: .9em; }
+.legal-sections p { margin: 0 0 12px; }
+.legal-sections p:last-child { margin-bottom: 0; }
+.legal-sections ul { display: grid; gap: 11px; margin: 0; padding-left: 21px; }
+.legal-sections li { padding-left: 4px; }
+.legal-contact-details { display: grid; gap: 14px; margin: 0; }
+.legal-contact-details div { display: grid; grid-template-columns: minmax(190px, .8fr) minmax(0, 1.2fr); gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #e4e8e1; }
+.legal-contact-details div:last-child { padding-bottom: 0; border-bottom: 0; }
+.legal-contact-details dt { color: #68766a; font-size: 12px; font-weight: 600; }
+.legal-contact-details dd { margin: 0; color: #35473a; font-size: 13px; line-height: 1.6; }
+.legal-footer { display: flex; min-height: 78px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid #d8ddd3; color: #68766a; font-size: 11px; }
 
 .account-page { min-height: 100vh; }
 .account-nav { display: flex; min-height: 78px; align-items: center; justify-content: space-between; }
@@ -988,6 +1019,12 @@ a:focus-visible {
   .account-aside__copy { margin-top: 82px; }
   .account-aside__copy h1 { max-width: 400px; font-size: 32px; }
   .account-form-panel { padding: 32px 24px; }
+  .legal-page { padding-inline: 20px; }
+  .legal-document { padding-top: 46px; }
+  .legal-sections section { padding: 21px 0; }
+  .legal-sections p, .legal-sections li { font-size: 13px; }
+  .legal-contact-details div { grid-template-columns: 1fr; gap: 5px; }
+  .legal-footer { align-items: flex-start; flex-direction: column; justify-content: center; padding: 18px 0; }
 }
 
 @media (max-width: 400px) {

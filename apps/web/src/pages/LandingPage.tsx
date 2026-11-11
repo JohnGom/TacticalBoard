@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { Brand } from "../ui/Brand";
+import { LegalLinks } from "./LegalPages";
 
 type PositionRole = "goalkeeper" | "defender" | "midfielder" | "forward";
 
@@ -217,6 +218,7 @@ export function LandingPage() {
           <div className="public-footer">
             <Brand />
             <span>Una idea clara también cambia el partido.</span>
+            <LegalLinks className="public-footer__legal" />
             <Link to="/login">Iniciar sesión</Link>
           </div>
         </div>
